@@ -18,6 +18,10 @@ defmodule AlloPlaceserv.Server do
 
   defp loop_acceptor(socket) do
     {:ok, client} = :gen_tcp.accept(socket)
+    entityId = UUID.uuid1()
+    :ok = AlloPlaceserv.PlaceStore.add_entity(AlloPlaceserv.Store, %Entity{
+      id: entityId
+    })
     {:ok, pid} = Task.Supervisor.start_child(AlloPlaceserv.TaskSupervisor, fn -> serve(client) end)
     :ok = :gen_tcp.controlling_process(client, pid)
     loop_acceptor(socket)
