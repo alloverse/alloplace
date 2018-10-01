@@ -24,6 +24,9 @@ defmodule AlloPlaceserv.PlaceStore do
   def add_entity(server, ent) do
     GenServer.call(server, {:add_entity, ent})
   end
+  def remove_entity(server, entity_id) do
+    GenServer.cast(server, {:remove_entity, entity_id})
+  end
   
   ## Server callbacks
   def handle_call({:add_entity, ent}, _from, state) do
@@ -32,6 +35,14 @@ defmodule AlloPlaceserv.PlaceStore do
       :ok, 
       %{state | 
         entities: [ent | state.entities]
+      }
+    }
+  end
+  def handle_cast({:remove_entity, entity_id}, state) do
+    Logger.info "Removing entity #{entity_id}"
+    {:noreply,
+      %{state |
+      entities: List.keydelete(state.entities, entity_id, 2)
       }
     }
   end

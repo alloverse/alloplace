@@ -22,22 +22,23 @@ defmodule AlloPlaceserv.Server do
     :ok = AlloPlaceserv.PlaceStore.add_entity(AlloPlaceserv.Store, %Entity{
       id: entityId
     })
-    {:ok, pid} = Task.Supervisor.start_child(AlloPlaceserv.TaskSupervisor, fn -> serve(client) end)
+    {:ok, pid} = Task.Supervisor.start_child(
+      AlloPlaceserv.TaskSupervisor, 
+      fn -> serve(client, entityId) end
+    )
     :ok = :gen_tcp.controlling_process(client, pid)
     loop_acceptor(socket)
   end
 
-  defp serve(socket) do
-    socket
-    |> read_line()
-    |> write_line(socket)
-
-    serve(socket)
-  end
-
-  defp read_line(socket) do
-    {:ok, data} = :gen_tcp.recv(socket, 0)
-    data
+  defp serve(socket, entityId) do
+    case :gen_tcp.recv(socket, 0) do
+      {:ok, data} ->
+        Logger.info "#{entityId} says: #{data}"
+        serve(socket, entityId)
+      {:error, :closed} ->
+        AlloPlaceserv.PlaceStore.remove_entity(AlloPlaceserv.Store, entityId)
+        :close
+    end
   end
 
   defp write_line(line, socket) do
