@@ -33,7 +33,7 @@ defmodule AlloPlaceserv.Server do
   defp serve(socket, entityId) do
     case :gen_tcp.recv(socket, 0) do
       {:ok, data} ->
-        Logger.info "#{entityId} says: #{data}"
+        :ok = parse_command(entityId, data)
         serve(socket, entityId)
       {:error, :closed} ->
         AlloPlaceserv.PlaceStore.remove_entity(AlloPlaceserv.Store, entityId)
@@ -43,5 +43,15 @@ defmodule AlloPlaceserv.Server do
 
   defp write_line(line, socket) do
     :gen_tcp.send(socket, line)
+  end
+  
+  defp parse_command(entityId, data) do
+    case String.at(data, 0) do
+      "w" -> :ok = AlloPlaceserv.PlaceStore.move_entity(AlloPlaceserv.Store, entityId, {:relative, [0,0,1]})
+      "s" -> :ok = AlloPlaceserv.PlaceStore.move_entity(AlloPlaceserv.Store, entityId, {:relative, [0,0,-1]})
+      "a" -> :ok = AlloPlaceserv.PlaceStore.move_entity(AlloPlaceserv.Store, entityId, {:relative, [0,0,-1]})
+      "d" -> :ok = AlloPlaceserv.PlaceStore.move_entity(AlloPlaceserv.Store, entityId, {:relative, [0,0,1]})
+    end
+    :ok
   end
 end
