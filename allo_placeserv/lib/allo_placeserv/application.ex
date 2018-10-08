@@ -7,7 +7,7 @@ defmodule AlloPlaceserv.Application do
   def start(_type, _args) do
     children = [
       {Task.Supervisor, name: AlloPlaceserv.TaskSupervisor},
-      Supervisor.child_spec({Task, fn -> AlloPlaceserv.Server.accept(16016) end}, restart: :permanent),
+      {AlloPlaceserv.Server, name: AlloPlaceserv.Serv},
       {AlloPlaceserv.PlaceStore, name: AlloPlaceserv.Store},
     ]
 
