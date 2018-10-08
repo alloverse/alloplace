@@ -1,9 +1,8 @@
 defmodule AlloPlaceserv.MmTcp do
+  require Logger
+  
   def start(port, parent) do
-    {:ok, pid} = Task.Supervisor.start_child(
-      AlloPlaceserv.TaskSupervisor, 
-      fn -> accept(port, parent) end
-    )
+    spawn_link(fn -> accept(port, parent) end)
     :ok
   end
   
@@ -11,7 +10,7 @@ defmodule AlloPlaceserv.MmTcp do
     {:ok, listen} = :gen_tcp.listen(port, [
       :binary, 
       packet: :line, 
-      active: true, 
+      active: false, 
       reuseaddr: true
     ])
     Logger.info "Accepting connections on port #{port}"
@@ -23,22 +22,40 @@ defmodule AlloPlaceserv.MmTcp do
     connectionId = UUID.uuid1()
     {:ok, pid} = Task.Supervisor.start_child(
       AlloPlaceserv.TaskSupervisor, 
-      fn -> serve(parent, client, connectionId) end
+      # todo: notify parent if mm crashes
+      fn ->
+        serve(parent, client, connectionId) 
+      end
     )
     :ok = :gen_tcp.controlling_process(client, pid)
-    parent ! {:new_client, connectionId, pid}
-    loop_acceptor(socket)
+    send pid, :become_active
+    send parent, {:new_client, connectionId, pid}
+    loop_acceptor(parent, listen)
   end
 
   defp serve(parent, client, connectionId) do
-    # TODO: convert this to receive and active mode
-    case :gen_tcp.recv(client, 0) do
-      {:ok, data} ->
-        :ok = parse_command(connectionId, data)
-        serve(socket, connectionId)
-      {:error, :closed} ->
-        parent ! {:lost_client, connectionId}
+    receive do
+      :become_active ->
+        :inet.setopts(client, [active: true])
+        
+      {:tcp, _socket, data} ->
+        cmd = parse_command(connectionId, data)
+        send parent, cmd
+        serve(parent, client, connectionId)
+      
+      {:tcp_closed, _socket} ->
+        send parent, {:lost_client, connectionId}
         :close
+    end
+  end
+  
+  defp parse_command(connectionId, data) do
+    case String.at(data, 0) do
+      "w" -> {:move_avatar, connectionId, {:relative, [0,0,1]}}
+      "s" -> {:move_avatar, connectionId, {:relative, [0,0,-1]}}
+      "a" -> {:move_avatar, connectionId, {:relative, [-1,0,0]}}
+      "d" -> {:move_avatar, connectionId, {:relative, [1,0,0]}}
+      # otherwise, crash
     end
   end
 end
