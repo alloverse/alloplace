@@ -45,7 +45,6 @@ defmodule AlloPlaceserv.PlaceStore do
   def handle_call({:move_entity, entity_id, {type, newpos}}, _from, state)
   when length(newpos) == 3 do
     {:ok, entity} = Map.fetch(state.entities, entity_id)
-    Logger.info "Moving entity #{entity_id} with #{type}"
     {:reply,
       :ok,
       %{state|
@@ -60,10 +59,11 @@ defmodule AlloPlaceserv.PlaceStore do
   end
   
   def handle_cast({:remove_entity, entity_id}, state) do
-    Logger.info "Removing entity #{entity_id}, now #{length(Map.keys(state.entities))}"
+    new_entities = Map.delete(state.entities, entity_id)
+    Logger.info "Removing entity #{entity_id}, now #{length(Map.keys(new_entities))}"
     {:noreply,
       %{state |
-        entities: Map.delete(state.entities, entity_id)
+        entities: new_entities
       }
     }
   end

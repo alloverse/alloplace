@@ -37,6 +37,7 @@ defmodule AlloPlaceserv.MmTcp do
     receive do
       :become_active ->
         :inet.setopts(client, [active: true])
+        serve(parent, client, connectionId)
         
       {:tcp, _socket, data} ->
         cmd = parse_command(connectionId, data)
