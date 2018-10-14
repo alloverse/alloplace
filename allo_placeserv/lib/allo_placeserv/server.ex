@@ -1,9 +1,10 @@
 defmodule ServerState do
-  defstruct clients: %{} # client_id to ClientRef
+  defstruct clients: %{}, # client_id to ClientRef
+    push_state_timer: nil # TRef
 end
 defmodule ClientRef do
-  @enforce_keys [:pid, :monitor, :id]
-  defstruct pid: nil, monitor: nil, id: nil
+  @enforce_keys [:mm, :monitor, :id]
+  defstruct mm: nil, monitor: nil, id: nil
 end
 
 defmodule AlloPlaceserv.Server do
@@ -16,7 +17,8 @@ defmodule AlloPlaceserv.Server do
 
   def init(initial_state) do
     AlloPlaceserv.MmTcp.start(16016, self())
-    {:ok, initial_state}
+    {:ok, tref} = :timer.send_interval(500, self(), {:timer, 500})
+    {:ok, %ServerState{initial_state| push_state_timer: tref}}
   end
 
   def start_link(opts) do
@@ -36,12 +38,13 @@ defmodule AlloPlaceserv.Server do
     {:ok, state} = remove_client(client_id, state)
     {:noreply, state}
   end
-  def handle_info({:DOWN, _monitor_ref, :process, _mm_pid, reason}, state) when reason == :normal do
+  def handle_info({:DOWN, _monitor_ref, :process, _mm_pid, reason}, state) 
+  when reason == :normal do
     # handled by lost_client. this message is only sent because the monitor isn't removed in time.
     {:noreply, state}
   end
   def handle_info({:DOWN, _monitor_ref, :process, mm_pid, reason}, state) do
-    {_client_id, client} = Enum.find(state.clients, fn({_key, client}) -> client.pid == mm_pid end)
+    {_client_id, client} = Enum.find(state.clients, fn({_key, client}) -> client.mm == mm_pid end)
     Logger.info("Client crashed: #{client.id} reason: #{inspect(reason)}")
     {:ok, state} = remove_client(client.id, state)
     {:noreply, state}
@@ -52,7 +55,12 @@ defmodule AlloPlaceserv.Server do
     {:noreply, state}
   end
   
-  #todo: handle sending world state with timer
+  def handle_info({:timer, _interval}, state) do
+    Enum.each(state.clients, fn({_client_id, client}) ->
+      AlloPlaceserv.MmTcp.send_raw(client.mm, "hello")
+    end)
+    {:noreply, state}
+  end
   
   
   ### Privates
@@ -65,7 +73,7 @@ defmodule AlloPlaceserv.Server do
       :ok,
       %ServerState{state|
         clients: Map.put(state.clients, client_id, %ClientRef{
-          pid: mm_pid, monitor: monitorref,id: client_id
+          mm: mm_pid, monitor: monitorref,id: client_id
         })
       }
     }
