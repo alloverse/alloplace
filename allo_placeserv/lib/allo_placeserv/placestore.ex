@@ -1,9 +1,14 @@
 defmodule StoreState do
+  @derive Jason.Encoder
   defstruct entities: %{}
 end
+
 defmodule Entity do
   @enforce_keys [:id]
-  defstruct id: nil, position: [0,0,0]
+  @derive Jason.Encoder
+  defstruct id: nil, 
+    position: [0,0,0],
+    rotation: [0,0,0]
 end
 
 defmodule AlloPlaceserv.PlaceStore do
@@ -30,11 +35,14 @@ defmodule AlloPlaceserv.PlaceStore do
   def move_entity(server, entity_id, movement_cmd) do
     GenServer.call(server, {:move_entity, entity_id, movement_cmd})
   end
+  def get_snapshot(server) do
+    GenServer.call(server, {:get_snapshot})
+  end
   
   ## Server callbacks
   def handle_call({:add_entity, ent}, _from, state) do
     Logger.info "Adding entity #{ent.id}"
-    {:reply, 
+    { :reply, 
       :ok, 
       %{state | 
         entities: Map.put(state.entities, ent.id, ent)
@@ -44,7 +52,7 @@ defmodule AlloPlaceserv.PlaceStore do
   
   def handle_call({:move_entity, entity_id, {type, newpos}}, _from, state)
   when length(newpos) == 3 do
-    {:reply,
+    { :reply,
       :ok,
       %{state|
         entities: Map.update!(state.entities, entity_id, fn(entity) -> %{entity|
@@ -58,10 +66,17 @@ defmodule AlloPlaceserv.PlaceStore do
     }
   end
   
+  def handle_call({:get_snapshot}, _from, state) do
+    { :reply,
+      {:ok, state},
+      state
+    }
+  end
+  
   def handle_cast({:remove_entity, entity_id}, state) do
     new_entities = Map.delete(state.entities, entity_id)
     Logger.info "Removing entity #{entity_id}, now #{length(Map.keys(new_entities))}"
-    {:noreply,
+    { :noreply,
       %{state |
         entities: new_entities
       }

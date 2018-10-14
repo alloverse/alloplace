@@ -56,8 +56,11 @@ defmodule AlloPlaceserv.Server do
   end
   
   def handle_info({:timer, _interval}, state) do
+    {:ok, snapshot} = AlloPlaceserv.PlaceStore.get_snapshot(AlloPlaceserv.Store)
+    {:ok, json} = Jason.encode(snapshot)
+    payload = json <> "\n"
     Enum.each(state.clients, fn({_client_id, client}) ->
-      AlloPlaceserv.MmTcp.send_raw(client.mm, "hello")
+      AlloPlaceserv.MmTcp.send_raw(client.mm, payload)
     end)
     {:noreply, state}
   end
