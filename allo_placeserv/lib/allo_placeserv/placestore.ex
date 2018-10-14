@@ -44,17 +44,17 @@ defmodule AlloPlaceserv.PlaceStore do
   
   def handle_call({:move_entity, entity_id, {type, newpos}}, _from, state)
   when length(newpos) == 3 do
-    {:ok, entity} = Map.fetch(state.entities, entity_id)
     {:reply,
       :ok,
       %{state|
-        entities: Map.put(state.entities, entity_id, %{entity|
+        entities: Map.update!(state.entities, entity_id, fn(entity) -> %{entity|
           position: case type do
             :absolute -> newpos
             :relative -> 
               Enum.map(Enum.zip(entity.position, newpos), fn {a,b} -> a+b end)
           end
-        })}
+        } end)
+      }
     }
   end
   

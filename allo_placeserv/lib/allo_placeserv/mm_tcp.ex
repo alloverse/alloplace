@@ -22,7 +22,6 @@ defmodule AlloPlaceserv.MmTcp do
     connectionId = UUID.uuid1()
     {:ok, pid} = Task.Supervisor.start_child(
       AlloPlaceserv.TaskSupervisor, 
-      # todo: notify parent if mm crashes
       fn ->
         serve(parent, client, connectionId) 
       end
