@@ -7,6 +7,7 @@ defmodule AlloPlaceserv.MixProject do
       version: "0.1.0",
       elixir: "~> 1.7",
       start_permanent: Mix.env() == :prod,
+      compilers: [:cmake] ++ Mix.compilers(),
       deps: deps()
     ]
   end
@@ -24,6 +25,7 @@ defmodule AlloPlaceserv.MixProject do
     [
       {:uuid, "~> 1.1"},
       {:jason, "~> 1.1"},
+      {:elixir_cmake, "~> 0.1.0"},
       # {:dep_from_hexpm, "~> 0.3.0"},
       # {:dep_from_git, git: "https://github.com/elixir-lang/my_dep.git", tag: "0.1.0"},
     ]
