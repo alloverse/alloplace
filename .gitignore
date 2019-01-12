@@ -26,3 +26,4 @@ allo_placeserv-*.tar
 _cmake
 priv
 .elixir_ls
+.vscode
