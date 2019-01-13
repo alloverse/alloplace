@@ -1,5 +1,6 @@
 defmodule ServerState do
   defstruct clients: %{}, # client_id to ClientRef
+    mmallo: nil,
     push_state_timer: nil # TRef
 end
 defmodule ClientRef do
@@ -16,29 +17,37 @@ defmodule AlloPlaceserv.Server do
   require Logger
 
   def init(initial_state) do
+    Logger.info("Started Alloverse Place server")
     AlloPlaceserv.MmTcp.start(16016, self())
+    {:ok, mmallo} = AlloPlaceserv.MmAllonet.start(31337, self())
+    reply = AlloPlaceserv.MmAllonet.foo(mmallo, 12)
+    Logger.info("Reply #{reply}")
     {:ok, tref} = :timer.send_interval(500, self(), {:timer, 500})
-    {:ok, %ServerState{initial_state| push_state_timer: tref}}
+
+    {:ok, %ServerState{initial_state|
+      push_state_timer: tref,
+      mmallo: mmallo}
+    }
   end
 
   def start_link(opts) do
     GenServer.start_link(__MODULE__, %ServerState{
-      
+
     }, opts)
   end
-  
+
   def handle_info({:new_client, client_id, mm_pid}, state) do
     Logger.info("Client connected: #{client_id}")
     {:ok, state} = add_client(client_id, mm_pid, state)
     {:noreply, state}
   end
-  
+
   def handle_info({:lost_client, client_id}, state) do
     Logger.info("Client disconnected: #{client_id}")
     {:ok, state} = remove_client(client_id, state)
     {:noreply, state}
   end
-  def handle_info({:DOWN, _monitor_ref, :process, _mm_pid, reason}, state) 
+  def handle_info({:DOWN, _monitor_ref, :process, _mm_pid, reason}, state)
   when reason == :normal do
     # handled by lost_client. this message is only sent because the monitor isn't removed in time.
     {:noreply, state}
@@ -49,12 +58,12 @@ defmodule AlloPlaceserv.Server do
     {:ok, state} = remove_client(client.id, state)
     {:noreply, state}
   end
-  
+
   def handle_info({:move_avatar, connectionId, movement}, state) do
     :ok = AlloPlaceserv.PlaceStore.move_entity(AlloPlaceserv.Store, connectionId, movement)
     {:noreply, state}
   end
-  
+
   def handle_info({:timer, _interval}, state) do
     {:ok, snapshot} = AlloPlaceserv.PlaceStore.get_snapshot(AlloPlaceserv.Store)
     {:ok, json} = Jason.encode(snapshot)
@@ -64,8 +73,8 @@ defmodule AlloPlaceserv.Server do
     end)
     {:noreply, state}
   end
-  
-  
+
+
   ### Privates
   defp add_client(client_id, mm_pid, state) do
     monitorref = Process.monitor(mm_pid)

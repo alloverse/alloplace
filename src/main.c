@@ -2,8 +2,8 @@
 #include <erl_interface.h>
 #include "erl_comm.h"
 
-int foo(int a) { return a; }
-int bar(int a) { return a; }
+int foo(int a) { return a*2; }
+int bar(int a) { return a*3; }
 
 int main() {
   ETERM *tuplep, *intp;
