@@ -17,12 +17,11 @@ defmodule AlloPlaceserv.Server do
   require Logger
 
   def init(initial_state) do
-    Logger.info("Started Alloverse Place server")
-    AlloPlaceserv.MmTcp.start(16016, self())
-    {:ok, mmallo} = AlloPlaceserv.MmAllonet.start(31337, self())
+    Logger.info("Starting Alloverse Place server")
+    {:ok, mmallo} = AlloPlaceserv.MmAllonet.start_link([], 31337, self())
+    {:ok, tref} = :timer.send_interval(Kernel.trunc(1000/20), self(), {:timer, 1000/20})
     reply = AlloPlaceserv.MmAllonet.foo(mmallo, 12)
     Logger.info("Reply #{reply}")
-    {:ok, tref} = :timer.send_interval(500, self(), {:timer, 500})
 
     {:ok, %ServerState{initial_state|
       push_state_timer: tref,
