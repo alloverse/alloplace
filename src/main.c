@@ -14,15 +14,18 @@ int main()
   }
 
   alloserver *serv = allo_listen();
+  if(!serv) {
+      fprintf(stderr, "Unable to create allonet server. Is port in use?\n");
+      perror("errno");
+      return -2;
+  }
   //serv->clients_callback = clients_changed;
   LIST_INIT(&serv->state.entities);
-  printf("lol %p\n", serv);
 
   ETERM *tuplep, *intp;
   ETERM *fnp, *argp;
   int res;
   uint8_t buf[100];
-  long allocated, freed;
 
   erl_init(NULL, 0);
 
