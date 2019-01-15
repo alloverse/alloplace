@@ -16,7 +16,11 @@ defmodule AlloPlaceserv.MmAllonet do
   end
 
   def init(initial_state) do
-    port = Port.open({:spawn, "priv/AllonetPort"}, [{:packet, 2}, :binary])
+    port = Port.open({:spawn, "priv/AllonetPort"}, [
+      {:packet, 2},
+      :binary,
+      :nouse_stdio
+    ])
     {:ok, %AllonetState{initial_state|
       port: port
     }}

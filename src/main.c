@@ -1,11 +1,23 @@
 #include <string.h>
 #include <erl_interface.h>
+#include <allonet/allonet.h>
 #include "erl_comm.h"
 
 int foo(int a) { return a*2; }
 int bar(int a) { return a*3; }
 
-int main() {
+int main()
+{
+  if(!allo_initialize(false)) {
+      fprintf(stderr, "Unable to initialize allonet");
+      return -1;
+  }
+
+  alloserver *serv = allo_listen();
+  //serv->clients_callback = clients_changed;
+  LIST_INIT(&serv->state.entities);
+  printf("lol %p\n", serv);
+
   ETERM *tuplep, *intp;
   ETERM *fnp, *argp;
   int res;
