@@ -2,6 +2,7 @@
 #include <erl_interface.h>
 #include <allonet/allonet.h>
 #include "erl_comm.h"
+#include <enet/enet.h>
 
 int foo(int a) { return a*2; }
 int bar(int a) { return a*3; }
@@ -28,6 +29,13 @@ int main()
   uint8_t buf[100];
 
   erl_init(NULL, 0);
+  
+  ENetSocketSet set;
+  ENET_SOCKETSET_EMPTY(set);
+  ENET_SOCKETSET_ADD(set, allo_socket_for_select(serv));
+  ENET_SOCKETSET_ADD(set, erlin);
+  
+  //enet_socketset_select(<#ENetSocket#>, <#ENetSocketSet *#>, <#ENetSocketSet *#>, <#enet_uint32#>)
 
   while (read_cmd(buf) > 0) {
     tuplep = erl_decode(buf);

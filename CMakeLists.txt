@@ -15,12 +15,13 @@ include_directories(
     ${Erlang_EI_INCLUDE_DIR}
     "src/allonet/include"
     "src/allonet/lib"
+    "src/allonet/lib/enet/include"
 )
 link_directories(
   ${Erlang_EI_LIBRARY_DIR}
 )
 
-file(GLOB SOURCES src/*.c)
+file(GLOB SOURCES src/*.h src/*.c)
 add_executable(${PROJECT_NAME} ${SOURCES})
 target_link_libraries(${PROJECT_NAME} "ei" "erl_interface" "allonet")
 
