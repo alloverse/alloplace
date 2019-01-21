@@ -1,14 +1,20 @@
 #include <unistd.h>
 #include "erl_comm.h"
 
-int read_cmd(uint8_t *buf)
-{
-  int len;
+static uint8_t *g_buf; // buffer between call to handle async reading
+static uint16_t g_target_length; // how much to read from stream before done
+static uint16_t g_filled_length; // how much read so far
 
-  if (read_exact(buf, 2) != 2)
-    return(-1);
-  len = (buf[0] << 8) | buf[1];
-  return read_exact(buf, len);
+
+uint8_t* read_cmd()
+{
+    uint8_t lenbuf[2];
+    int len;
+
+    if (read_exact(lenbuf, 2) != 2)
+        return NULL;
+    len = (buf[0] << 8) | buf[1];
+    return read_exact(buf, len);
 }
 
 int write_cmd(uint8_t *buf, int len)
