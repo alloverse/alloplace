@@ -84,16 +84,13 @@ int main()
         ENET_SOCKETSET_ADD(set, allosocket);
         ENET_SOCKETSET_ADD(set, erlin);
         
-        printf("selecting...\n");
-        int selectr = enet_socketset_select(MAX(allosocket, erlin), &set, NULL, 1);
+        int selectr = enet_socketset_select(MAX(allosocket, erlin), &set, NULL, 1000);
         if(selectr < 0) {
             perror("select failed, terminating");
             return -3;
         } else if(ENET_SOCKETSET_CHECK(set, allosocket)) {
-            printf("reading allo...\n");
             handle_allo();
         } else if(ENET_SOCKETSET_CHECK(set, erlin)) {
-            printf("reading erl...\n");
             handle_erl();
         }
     }
