@@ -14,26 +14,24 @@
 int foo(int a) { return a*2; }
 int bar(int a) { return a*3; }
 
+alloserver *serv;
+
 void handle_allo()
 {
-
+    while(serv->interbeat(serv, 1)) {}
 }
 
 void handle_erl()
 {
-    ETERM *tuplep, *intp;
-    ETERM *fnp, *argp;
-    int res;
-    uint8_t buf[100];
+    uint8_t *buf = read_cmd();
+    if(!buf)
+        return;
+    ETERM *tuplep = erl_decode(buf);
+    free(buf); buf = NULL;
     
-    // todo: read
-    
-    // todo: check for false positive on select
-    
-    tuplep = erl_decode(buf);
-    fnp = erl_element(1, tuplep);
-    argp = erl_element(2, tuplep);
-
+    ETERM *fnp = erl_element(1, tuplep);
+    ETERM *argp = erl_element(2, tuplep);
+    int res = 0;
     if (strncmp(ERL_ATOM_PTR(fnp), "foo", 3) == 0) {
       res = foo(ERL_INT_VALUE(argp));
     } else if (strncmp(ERL_ATOM_PTR(fnp), "bar", 3) == 0) {
@@ -41,11 +39,13 @@ void handle_erl()
     } else {
         return;
     }
-
-    intp = erl_mk_int(res);
-    erl_encode(intp, buf);
-    write_cmd(buf, erl_term_len(intp));
-
+    
+    ETERM *intp = erl_mk_int(res);
+    uint8_t *outbuf = malloc(erl_term_len(intp));
+    erl_encode(intp, outbuf);
+    write_cmd(outbuf, erl_term_len(intp));
+    free(outbuf);
+    
     erl_free_compound(tuplep);
     erl_free_term(fnp);
     erl_free_term(argp);
@@ -59,7 +59,7 @@ int main()
         return -1;
     }
 
-    alloserver *serv = allo_listen();
+    serv = allo_listen();
     if(!serv) {
         fprintf(stderr, "Unable to create allonet server. Is port in use?\n");
         perror("errno");
@@ -76,19 +76,24 @@ int main()
         return -4;
     }
     
+    printf("allonetport open\n");
+    
     while (1) {
         ENetSocketSet set;
         ENET_SOCKETSET_EMPTY(set);
         ENET_SOCKETSET_ADD(set, allosocket);
         ENET_SOCKETSET_ADD(set, erlin);
-
+        
+        printf("selecting...\n");
         int selectr = enet_socketset_select(MAX(allosocket, erlin), &set, NULL, 1);
         if(selectr < 0) {
             perror("select failed, terminating");
             return -3;
         } else if(ENET_SOCKETSET_CHECK(set, allosocket)) {
+            printf("reading allo...\n");
             handle_allo();
         } else if(ENET_SOCKETSET_CHECK(set, erlin)) {
+            printf("reading erl...\n");
             handle_erl();
         }
     }
