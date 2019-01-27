@@ -10,6 +10,12 @@
        __typeof__ (b) _b = (b); \
      _a > _b ? _a : _b; })
 
+void erl_free_term_handle(ETERM **term) { erl_free_term(*term); }
+void erl_free_compound_handle(ETERM **term) { erl_free_compound(*term); }
+#define scoped_term __attribute__ ((__cleanup__(erl_free_term_handle)))
+#define scoped_comp __attribute__ ((__cleanup__(erl_free_compound_handle)))
+void free_handle(uint8_t **handle) { free(*handle); }
+#define scoped __attribute__ ((__cleanup__(free_handle)))
 
 int foo(int a) { return a*2; }
 int bar(int a) { return a*3; }
@@ -23,14 +29,13 @@ void handle_allo()
 
 void handle_erl()
 {
-    uint8_t *buf = read_cmd();
+    scoped uint8_t *buf = read_cmd();
     if(!buf)
         return;
-    ETERM *tuplep = erl_decode(buf);
-    free(buf); buf = NULL;
+    scoped_comp ETERM *tuplep = erl_decode(buf);
     
-    ETERM *fnp = erl_element(1, tuplep);
-    ETERM *argp = erl_element(2, tuplep);
+    scoped_term ETERM *fnp = erl_element(1, tuplep);
+    scoped_term ETERM *argp = erl_element(2, tuplep);
     int res = 0;
     if (strncmp(ERL_ATOM_PTR(fnp), "foo", 3) == 0) {
       res = foo(ERL_INT_VALUE(argp));
@@ -40,17 +45,17 @@ void handle_erl()
         return;
     }
     
-    ETERM *intp = erl_mk_int(res);
-    uint8_t *outbuf = malloc(erl_term_len(intp));
+    scoped_term ETERM *intp = erl_mk_int(res);
+    scoped uint8_t *outbuf = malloc(erl_term_len(intp));
     erl_encode(intp, outbuf);
     write_cmd(outbuf, erl_term_len(intp));
-    free(outbuf);
-    
-    erl_free_compound(tuplep);
-    erl_free_term(fnp);
-    erl_free_term(argp);
-    erl_free_term(intp);
 }
+
+void clients_changed(alloserver *serv, alloserver_client *added, alloserver_client *removed)
+{
+
+}
+
 
 int main()
 {
@@ -65,7 +70,7 @@ int main()
         perror("errno");
         return -2;
     }
-    //serv->clients_callback = clients_changed;
+    serv->clients_callback = clients_changed;
     LIST_INIT(&serv->state.entities);
 
     erl_init(NULL, 0);
