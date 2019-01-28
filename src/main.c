@@ -17,6 +17,13 @@ void erl_free_compound_handle(ETERM **term) { erl_free_compound(*term); }
 void free_handle(uint8_t **handle) { free(*handle); }
 #define scoped __attribute__ ((__cleanup__(free_handle)))
 
+void write_term(ETERM *term)
+{
+    scoped uint8_t *outbuf = malloc(erl_term_len(term));
+    erl_encode(term, outbuf);
+    write_cmd(outbuf, erl_term_len(term));
+}
+
 int foo(int a) { return a*2; }
 int bar(int a) { return a*3; }
 
@@ -53,7 +60,13 @@ void handle_erl()
 
 void clients_changed(alloserver *serv, alloserver_client *added, alloserver_client *removed)
 {
-
+    if(added) {
+        scoped_comp ETERM *msg = erl_format("{client_connected, ~i}", added);
+        write_term(msg);
+    } else {
+        scoped_comp ETERM *msg = erl_format("{client_disconnected, ~i}", removed);
+        write_term(msg);
+    }
 }
 
 
