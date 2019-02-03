@@ -41,21 +41,60 @@ void handle_erl()
         return;
     scoped_comp ETERM *tuplep = erl_decode(buf);
     
-    scoped_term ETERM *fnp = erl_element(1, tuplep);
-    scoped_term ETERM *argp = erl_element(2, tuplep);
-    int res = 0;
-    if (strncmp(ERL_ATOM_PTR(fnp), "foo", 3) == 0) {
-      res = foo(ERL_INT_VALUE(argp));
-    } else if (strncmp(ERL_ATOM_PTR(fnp), "bar", 3) == 0) {
-      res = bar(ERL_INT_VALUE(argp));
-    } else {
+    scoped_comp ETERM *command = erl_element(1, tuplep);
+    scoped_comp ETERM *reqId = erl_element(2, tuplep);
+    scoped_comp ETERM *args = erl_element(3, tuplep);
+    
+    if (strcmp(ERL_ATOM_PTR(command), "disconnect") == 0) {
+        scoped_term ETERM* e_client_ptr = erl_element(1, args);
+        void *client_ptr = ERL_LL_UVALUE(e_client_ptr);
+        alloserver_client *client;
+        LIST_FOREACH(client, &serv->clients, pointers)
+        {
+            if(client == client_ptr) {
+                serv->disconnect(serv, client);
+                scoped_comp ETERM *msg = erl_format("{:ok, ~w}", reqId);
+                write_term(msg);
+                return;
+            }
+        }
+        scoped_comp ETERM *msg = erl_format("{:error, ~w, \"no such client\"}", reqId);
+        write_term(msg);
+        return;
+    } else if (strcmp(ERL_ATOM_PTR(command), "stop") == 0) {
+        serv->stop(serv, 1000);
+        scoped_comp ETERM *msg = erl_format("{:ok, ~w}", reqId);
+        write_term(msg);
+        return;
+    } else if (strcmp(ERL_ATOM_PTR(command), "send") == 0) {
+        scoped_term ETERM* payload = erl_element(3, args);
+        scoped_term ETERM* channel = erl_element(2, args);
+        scoped_term ETERM* e_client_ptr = erl_element(1, args);
+        void *client_ptr = ERL_LL_UVALUE(e_client_ptr);
+        alloserver_client *client;
+        LIST_FOREACH(client, &serv->clients, pointers)
+        {
+            if(client == client_ptr) {
+                serv->send(
+                    serv,
+                    client,
+                    ERL_INT_VALUE(channel),
+                    (const uint8_t*)ERL_BIN_PTR(payload),
+                    ERL_BIN_SIZE(payload)
+                );
+                scoped_comp ETERM *msg = erl_format("{:ok, ~w}", reqId);
+                write_term(msg);
+                return;
+            }
+        }
+        scoped_comp ETERM *msg = erl_format("{:error, ~w, \"no such client\"}", reqId);
+        write_term(msg);
         return;
     }
     
-    scoped_term ETERM *intp = erl_mk_int(res);
-    scoped uint8_t *outbuf = malloc(erl_term_len(intp));
-    erl_encode(intp, outbuf);
-    write_cmd(outbuf, erl_term_len(intp));
+    scoped_comp ETERM *msg = erl_format("{:error, ~w, \"no such command\"}", reqId);
+    write_term(msg);
+    return;
 }
 
 void clients_changed(alloserver *serv, alloserver_client *added, alloserver_client *removed)
@@ -67,6 +106,12 @@ void clients_changed(alloserver *serv, alloserver_client *added, alloserver_clie
         scoped_comp ETERM *msg = erl_format("{client_disconnected, ~i}", removed);
         write_term(msg);
     }
+}
+
+void client_sent(alloserver *serv, alloserver_client *client, allochannel channel, const uint8_t *data)
+{
+    scoped_comp ETERM *msg = erl_format("{client_sent, ~i, ~s}", client, data);
+    write_term(msg);
 }
 
 
@@ -84,6 +129,7 @@ int main()
         return -2;
     }
     serv->clients_callback = clients_changed;
+    serv->raw_indata_callback = client_sent;
     LIST_INIT(&serv->state.entities);
 
     erl_init(NULL, 0);
