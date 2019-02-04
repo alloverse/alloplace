@@ -53,17 +53,17 @@ void handle_erl()
         {
             if(client == client_ptr) {
                 serv->disconnect(serv, client);
-                scoped_comp ETERM *msg = erl_format("{:ok, ~w}", reqId);
+                scoped_comp ETERM *msg = erl_format("{response, ~w, ok}", reqId);
                 write_term(msg);
                 return;
             }
         }
-        scoped_comp ETERM *msg = erl_format("{:error, ~w, \"no such client\"}", reqId);
+        scoped_comp ETERM *msg = erl_format("{response, ~w, {error, \"no such client\"}}", reqId);
         write_term(msg);
         return;
     } else if (strcmp(ERL_ATOM_PTR(command), "stop") == 0) {
         serv->stop(serv, 1000);
-        scoped_comp ETERM *msg = erl_format("{:ok, ~w}", reqId);
+        scoped_comp ETERM *msg = erl_format("{response, ~w, ok}", reqId);
         write_term(msg);
         return;
     } else if (strcmp(ERL_ATOM_PTR(command), "send") == 0) {
@@ -82,17 +82,17 @@ void handle_erl()
                     (const uint8_t*)ERL_BIN_PTR(payload),
                     ERL_BIN_SIZE(payload)
                 );
-                scoped_comp ETERM *msg = erl_format("{:ok, ~w}", reqId);
+                scoped_comp ETERM *msg = erl_format("{response, ~w, ok}", reqId);
                 write_term(msg);
                 return;
             }
         }
-        scoped_comp ETERM *msg = erl_format("{:error, ~w, \"no such client\"}", reqId);
+        scoped_comp ETERM *msg = erl_format("{response, ~w, {error, \"no such client\"}}", reqId);
         write_term(msg);
         return;
     }
     
-    scoped_comp ETERM *msg = erl_format("{:error, ~w, \"no such command\"}", reqId);
+    scoped_comp ETERM *msg = erl_format("{response, ~w, {error, \"no such command\"}}", reqId);
     write_term(msg);
     return;
 }

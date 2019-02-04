@@ -1,7 +1,8 @@
 defmodule AllonetState do
   defstruct udpport: 31337,
     delegate: nil, # pid()
-    port: nil # port()
+    port: nil, # port()
+    next_request_id: 1 # int()
 end
 
 defmodule AlloPlaceserv.MmAllonet do
@@ -26,23 +27,30 @@ defmodule AlloPlaceserv.MmAllonet do
     }}
   end
 
-  def foo(this, num) do
-    GenServer.call(this, {:ccall, {:foo, num}})
+  def netsend(this, client_id, channel, payload) do
+    GenServer.call(this, {:ccall, :send, {client_id, channel, payload}})
   end
-
   def stop(this) do
+    :ok = GenServer.call(this, {:ccall, :stop, {}})
     GenServer.call(this, :stop)
   end
+  def disconnect(this, client_id) do
+    GenServer.call(this, {:ccall, :disconnect, {client_id}})
+  end
 
-  def handle_call({:ccall, msg}, _from, state) do
+  def handle_call({:ccall, cmd, args}, _from, state) do
+    id = state.next_request_id
+    msg = {cmd, id, args}
     send(state.port, {self(), {:command, :erlang.term_to_binary(msg)}})
     resp = receive do
       {_port, {:data, data}} ->
-        :erlang.binary_to_term(data)
+
     end
     { :reply,
       resp,
-      state
+      %AllonetState{state|
+        next_request_id: id+1
+      }
     }
   end
 
@@ -54,6 +62,15 @@ defmodule AlloPlaceserv.MmAllonet do
     end
     { :reply,
       :ok,
+      state
+    }
+  end
+
+  def handle_info({:data, data}, state) do
+    {:response, request_id, payload} = :erlang.binary_to_term(data)
+
+    {
+      :noreply,
       state
     }
   end
