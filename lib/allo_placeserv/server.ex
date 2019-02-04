@@ -48,12 +48,15 @@ defmodule AlloPlaceserv.Server do
   def init(initial_state) do
     Logger.info("Starting Alloverse Place server")
     {:ok, mmallo} = AlloPlaceserv.MmAllonet.start_link([], self(), 31337)
-    #{:ok, tref} = :timer.send_interval(Kernel.trunc(1.0/20), self(), {:timer, 1000})#/20})
+
+    # update state and send world state @ 20hz
+    {:ok, tref} = :timer.send_interval(Kernel.trunc(1000/20), self(), {:timer, 1.0/20})
+
     reply = AlloPlaceserv.MmAllonet.ping(mmallo)
     Logger.info("C replies? #{reply}")
 
     {:ok, %ServerState{initial_state|
-      push_state_timer: nil, #tref,
+      push_state_timer: tref,
       mmallo: mmallo}
     }
   end
