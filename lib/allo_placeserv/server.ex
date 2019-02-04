@@ -20,7 +20,7 @@ defmodule AlloPlaceserv.Server do
     Logger.info("Starting Alloverse Place server")
     {:ok, mmallo} = AlloPlaceserv.MmAllonet.start_link([], 31337, self())
     {:ok, tref} = :timer.send_interval(Kernel.trunc(1000/20), self(), {:timer, 1000/20})
-    reply = AlloPlaceserv.MmAllonet.foo(mmallo, 12)
+    reply = AlloPlaceserv.MmAllonet.ping(mmallo)
     Logger.info("Reply #{reply}")
 
     {:ok, %ServerState{initial_state|
@@ -84,7 +84,9 @@ defmodule AlloPlaceserv.Server do
       :ok,
       %ServerState{state|
         clients: Map.put(state.clients, client_id, %ClientRef{
-          mm: mm_pid, monitor: monitorref,id: client_id
+          mm: mm_pid,
+          monitor: monitorref,
+          id: client_id
         })
       }
     }

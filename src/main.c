@@ -90,6 +90,10 @@ void handle_erl()
         scoped_comp ETERM *msg = erl_format("{response, ~w, {error, \"no such client\"}}", reqId);
         write_term(msg);
         return;
+    } else if(strcmp(ERL_ATOM_PTR(command), "ping") == 0) {
+        scoped_comp ETERM *msg = erl_format("{response, ~w, pong}", reqId);
+        write_term(msg);
+        return;
     }
     
     scoped_comp ETERM *msg = erl_format("{response, ~w, {error, \"no such command\"}}", reqId);
@@ -108,9 +112,9 @@ void clients_changed(alloserver *serv, alloserver_client *added, alloserver_clie
     }
 }
 
-void client_sent(alloserver *serv, alloserver_client *client, allochannel channel, const uint8_t *data)
+void client_sent(alloserver *serv, alloserver_client *client, allochannel channel, const uint8_t *data, size_t data_length)
 {
-    scoped_comp ETERM *msg = erl_format("{client_sent, ~i, ~s}", client, data);
+    scoped_comp ETERM *msg = erl_format("{client_sent, ~i, ~w}", client, erl_mk_binary((const char*)data, data_length));
     write_term(msg);
 }
 
