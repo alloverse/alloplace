@@ -94,12 +94,17 @@ defmodule AlloPlaceserv.MmAllonet do
           state
         }
       {:client_sent, client_id, payload} ->
-        send(state.delegate, {:client_sent, client_id, payload})
-        {
-          :noreply,
-          state
-        }
-
+        parse_payload(client_id, payload, state)
     end
+  end
+
+  defp parse_payload(client_id, payload, state) do
+    intent_packet = Jason.decode!(payload)
+
+    send(state.delegate, {:client_intent, client_id, intent_packet})
+    {
+      :noreply,
+      state
+    }
   end
 end
