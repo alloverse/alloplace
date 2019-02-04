@@ -74,6 +74,7 @@ void handle_erl()
         alloserver_client *client;
         LIST_FOREACH(client, &serv->clients, pointers)
         {
+            
             if(client == client_ptr) {
                 serv->send(
                     serv,
@@ -104,10 +105,10 @@ void handle_erl()
 void clients_changed(alloserver *serv, alloserver_client *added, alloserver_client *removed)
 {
     if(added) {
-        scoped_comp ETERM *msg = erl_format("{client_connected, ~i}", added);
+        scoped_comp ETERM *msg = erl_format("{client_connected, ~w}", erl_mk_ulonglong(added));
         write_term(msg);
     } else {
-        scoped_comp ETERM *msg = erl_format("{client_disconnected, ~i}", removed);
+        scoped_comp ETERM *msg = erl_format("{client_disconnected, ~w}", erl_mk_ulonglong(removed));
         write_term(msg);
     }
 }

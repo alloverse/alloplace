@@ -23,6 +23,7 @@ defmodule AlloPlaceserv.MmAllonet do
       :binary,
       :nouse_stdio
     ])
+
     {:ok, %AllonetState{initial_state|
       port: port
     }}
@@ -71,6 +72,7 @@ defmodule AlloPlaceserv.MmAllonet do
   end
 
   def handle_info({_from, {:data, data}}, state) do
+    Logger.info("hey lol from c: #{inspect(:erlang.binary_to_term(data))}")
     case :erlang.binary_to_term(data) do
       {:response, request_id, payload} ->
         {pid, oustanding} = Map.pop(state.outstanding_requests, request_id)

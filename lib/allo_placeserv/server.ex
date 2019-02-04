@@ -17,6 +17,19 @@ defmodule ClientIntentPacket do
   defstruct intent: %ClientIntent{}
 end
 
+defmodule Interaction do
+  @derive Jason.Encoder
+  defstruct from_entity: "",
+    to_entity: "",
+    cmd: ""
+end
+
+defmodule ClientInteractionPacket do
+  @derive Jason.Encoder
+  defstruct cmd: "interact",
+    interact: %Interaction{}
+end
+
 defmodule ClientRef do
   @enforce_keys [:id, :avatar_id]
   defstruct id: nil,
@@ -32,16 +45,15 @@ defmodule AlloPlaceserv.Server do
   use GenServer
   require Logger
 
-  @spec init(ServerState.t()) :: {:ok, ServerState.t()}
   def init(initial_state) do
     Logger.info("Starting Alloverse Place server")
-    {:ok, mmallo} = AlloPlaceserv.MmAllonet.start_link([], 31337, self())
-    {:ok, tref} = :timer.send_interval(Kernel.trunc(1.0/20), self(), {:timer, 1000/20})
+    {:ok, mmallo} = AlloPlaceserv.MmAllonet.start_link([], self(), 31337)
+    #{:ok, tref} = :timer.send_interval(Kernel.trunc(1.0/20), self(), {:timer, 1000})#/20})
     reply = AlloPlaceserv.MmAllonet.ping(mmallo)
-    Logger.info("Reply #{reply}")
+    Logger.info("C replies? #{reply}")
 
     {:ok, %ServerState{initial_state|
-      push_state_timer: tref,
+      push_state_timer: nil, #tref,
       mmallo: mmallo}
     }
   end
@@ -100,7 +112,6 @@ defmodule AlloPlaceserv.Server do
     {:noreply, state}
   end
 
-
   ### Privates
   defp generate_id() do
     Enum.take_random(?a..?z, 10)
@@ -112,8 +123,15 @@ defmodule AlloPlaceserv.Server do
       id: avatar_id
     })
 
-    hellopacket = "[\"your_avatar\", \"#{avatar_id}\"]"
-    AlloPlaceserv.MmAllonet.netsend(state.mmallo, client_id, 1, hellopacket)
+    hellointeraction = %ClientInteractionPacket{
+      interact: %Interaction{
+        from_entity: "place",
+        cmd: "[\"your_avatar\", \"#{avatar_id}\"]"
+      }
+    }
+    {:ok, json} = Jason.encode(hellointeraction)
+    payload = json <> "\n"
+    AlloPlaceserv.MmAllonet.netsend(state.mmallo, client_id, 1, payload)
 
     {
       :ok,
