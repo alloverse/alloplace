@@ -94,8 +94,8 @@ defmodule AlloPlaceserv.Server do
     {:ok, snapshot} = AlloPlaceserv.PlaceStore.get_snapshot(AlloPlaceserv.Store)
     {:ok, json} = Jason.encode(snapshot)
     payload = json <> "\n"
-    Enum.each(state.clients, fn({client_id, client}) ->
-      AlloPlaceserv.MmAllonet.netsend(mmallo, client_id, 0, payload)
+    Enum.each(state.clients, fn({client_id, _client}) ->
+      AlloPlaceserv.MmAllonet.netsend(state.mmallo, client_id, 0, payload)
     end)
     {:noreply, state}
   end
@@ -111,6 +111,10 @@ defmodule AlloPlaceserv.Server do
     :ok = AlloPlaceserv.PlaceStore.add_entity(AlloPlaceserv.Store, %Entity{
       id: avatar_id
     })
+
+    hellopacket = "[\"your_avatar\", \"#{avatar_id}\"]"
+    AlloPlaceserv.MmAllonet.netsend(state.mmallo, client_id, 1, hellopacket)
+
     {
       :ok,
       %ServerState{state|

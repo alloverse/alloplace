@@ -5,9 +5,8 @@ end
 
 # Todo: schema for component that generates these in elixir and c and c#...
 
-defmodule AlloVector
+defmodule AlloVector do
   @derive Jason.Encoder
-  @enforce_keys [:x, :y, :z]
   defstruct x: 0.0,
     y: 0.0,
     z: 0.0
@@ -15,12 +14,12 @@ end
 
 defmodule TransformComponent do
   @derive Jason.Encoder
-  defstruct position: %AlloVector{{},
+  defstruct position: %AlloVector{},
     rotation: %AlloVector{}
 end
 
 defmodule Entity do
-  @enforce_keys [:id, :components]
+  @enforce_keys [:id]
   @derive Jason.Encoder
   defstruct id: nil,
     components: %{
