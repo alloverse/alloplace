@@ -92,7 +92,7 @@ defmodule AlloPlaceserv.Server do
     # 1. Transform intents into forces
     Enum.each(state.clients, fn({_, client}) ->
       intent = client.intent
-      :ok = AlloPlaceserv.PlaceStore.update_entity(AlloPlaceserv.PlaceStore, client.avatar_id, "transform", fn(t) ->
+      :ok = AlloPlaceserv.PlaceStore.update_entity(AlloProcs.Store, client.avatar_id, :transform, fn(t) ->
         %TransformComponent{t|
           position: %AlloVector{t.position|
             x: t.position.x + intent.xmovement*delta,
@@ -106,7 +106,7 @@ defmodule AlloPlaceserv.Server do
     # ...todo, and make intents modify physprops, not transform
 
     # 3. Broadcast new states
-    {:ok, snapshot} = AlloPlaceserv.PlaceStore.get_snapshot(AlloPlaceserv.Store)
+    {:ok, snapshot} = AlloPlaceserv.PlaceStore.get_snapshot(AlloProcs.Store)
     {:ok, json} = Jason.encode(snapshot)
     payload = json <> "\n"
     Enum.each(state.clients, fn({client_id, _client}) ->
@@ -122,7 +122,7 @@ defmodule AlloPlaceserv.Server do
 
   defp add_client(client_id,  state) do
     avatar_id = generate_id()
-    :ok = AlloPlaceserv.PlaceStore.add_entity(AlloPlaceserv.Store, %Entity{
+    :ok = AlloPlaceserv.PlaceStore.add_entity(AlloProcs.Store, %Entity{
       id: avatar_id
     })
 
@@ -148,8 +148,7 @@ defmodule AlloPlaceserv.Server do
   end
   defp remove_client(client_id, state) do
     {:ok, clientref} = Map.fetch(state.clients, client_id)
-    Process.demonitor(clientref.monitor)
-    :ok = AlloPlaceserv.PlaceStore.remove_entity(AlloPlaceserv.Store, client_id)
+    :ok = AlloPlaceserv.PlaceStore.remove_entity(AlloProcs.Store, clientref.avatar_id)
     {
       :ok,
       %ServerState{state|
