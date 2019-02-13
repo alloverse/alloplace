@@ -1,6 +1,7 @@
 defmodule StoreState do
   @derive Jason.Encoder
-  defstruct entities: %{}
+  defstruct entities: %{},
+  revision: 0
 end
 
 # Todo: schema for component that generates these in elixir and c and c#...
@@ -108,7 +109,9 @@ defmodule AlloPlaceserv.PlaceStore do
   def handle_call({:get_snapshot}, _from, state) do
     { :reply,
       {:ok, state},
-      state
+      %{state|
+        revision: state.revision + 1
+      }
     }
   end
 
