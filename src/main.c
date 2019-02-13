@@ -115,7 +115,7 @@ void clients_changed(alloserver *serv, alloserver_client *added, alloserver_clie
 
 void client_sent(alloserver *serv, alloserver_client *client, allochannel channel, const uint8_t *data, size_t data_length)
 {
-    scoped_comp ETERM *msg = erl_format("{client_sent, ~i, ~w}", client, erl_mk_binary((const char*)data, data_length));
+    scoped_comp ETERM *msg = erl_format("{client_sent, ~w, ~w}", erl_mk_ulonglong(client), erl_mk_binary((const char*)data, data_length));
     write_term(msg);
 }
 
