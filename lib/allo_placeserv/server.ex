@@ -117,7 +117,7 @@ defmodule AlloPlaceserv.Server do
 
   ### Privates
   defp generate_id() do
-    Enum.take_random(?a..?z, 10)
+    to_string(Enum.take_random(?a..?z, 10))
   end
 
   defp add_client(client_id,  state) do

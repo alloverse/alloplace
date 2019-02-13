@@ -21,7 +21,7 @@ end
 defmodule Entity do
   @enforce_keys [:id]
   @derive Jason.Encoder
-  defstruct id: nil,
+  defstruct id: "",
     components: %{
       transform: %TransformComponent{}
     }
