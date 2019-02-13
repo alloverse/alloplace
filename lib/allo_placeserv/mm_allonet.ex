@@ -100,7 +100,8 @@ defmodule AlloPlaceserv.MmAllonet do
   end
 
   defp parse_payload(client_id, payload, state) do
-    intent_packet = Jason.decode!(payload)
+    # todo: :atoms is dangerous; make sure data conforms to intent record first
+    intent_packet = Jason.decode!(payload, [{:keys, :atoms}])
 
     send(state.delegate, {:client_intent, client_id, intent_packet})
     {
