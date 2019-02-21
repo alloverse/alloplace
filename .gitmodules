@@ -1,3 +1,3 @@
 [submodule "src/allonet"]
 	path = src/allonet
-	url = git@github.com:alloverse/allonet.git
+	url = https://github.com/alloverse/allonet.git
