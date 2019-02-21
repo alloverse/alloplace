@@ -97,6 +97,11 @@ defmodule AlloPlaceserv.Server do
           position: %AlloVector{t.position|
             x: t.position.x + intent.xmovement*delta,
             z: t.position.z + intent.zmovement*delta
+          },
+          rotation: %AlloVector{
+            x: intent.yaw,
+            y: intent.pitch,
+            z: 0
           }
         }
       end)
