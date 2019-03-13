@@ -153,14 +153,15 @@ int main()
         ENET_SOCKETSET_ADD(set, allosocket);
         ENET_SOCKETSET_ADD(set, erlin);
         
-        int selectr = enet_socketset_select(MAX(allosocket, erlin), &set, NULL, 1000);
+        int selectr = enet_socketset_select(MAX(allosocket, erlin), &set, NULL, 100);
         if(selectr < 0) {
             perror("select failed, terminating");
             return -3;
-        } else if(ENET_SOCKETSET_CHECK(set, allosocket)) {
-            handle_allo();
         } else if(ENET_SOCKETSET_CHECK(set, erlin)) {
             handle_erl();
+        } { // else if(ENET_SOCKETSET_CHECK(set, allosocket)) {
+            // just... always poll allo every 100ms, regardless
+            handle_allo();
         }
     }
 
