@@ -1,7 +1,13 @@
 defmodule ServerState do
-  defstruct clients: %{}, # client_id to ClientRef
+  defstruct clients: %{}, # from client_id to ClientRef
     mmallo: nil,
-    push_state_timer: nil # TRef
+    push_state_timer: nil
+
+  @type t :: %ServerState{
+    clients: %{required(String.t()) => ClientRef.t()},
+    mmallo: pid(),
+    push_state_timer: TRef
+  }
 end
 
 defmodule ClientIntent do
@@ -10,6 +16,7 @@ defmodule ClientIntent do
     xmovement: 0,
     yaw: 0,
     pitch: 0
+    @type t :: %ClientIntent{zmovement: float, xmovement: float, yaw: float, pitch: float}
 end
 
 defmodule ClientIntentPacket do
@@ -35,6 +42,7 @@ defmodule ClientRef do
   defstruct id: nil,
     avatar_id: nil,
     intent: %ClientIntent{}
+  @type t :: %ClientRef{id: String.t(), avatar_id: String.t(), intent: ClientIntent.t()}
 end
 
 defmodule AlloPlaceserv.Server do
@@ -88,16 +96,21 @@ defmodule AlloPlaceserv.Server do
     }
   end
 
+  @spec handle_info({:timer, float()}, ServerState.t()) :: {:noreply, ServerState.t()}
   def handle_info({:timer, delta}, state) do
     # 1. Transform intents into forces
     Enum.each(state.clients, fn({_, client}) ->
       intent = client.intent
       :ok = AlloPlaceserv.PlaceStore.update_entity(AlloProcs.Store, client.avatar_id, :transform, fn(t) ->
+        intentvec = Graphmath.Vec3.rotate(
+          Graphmath.Vec3.create(intent.xmovement, 0, intent.zmovement),
+          Graphmath.Vec3.create(0,1,0),
+          intent.yaw
+        )
+        Logger.info("Rotating intent #{inspect(intent)} becomes #{inspect(intentvec)}")
+        newpos = Graphmath.Vec3.add(Allomath.a2gvec(t.position), Graphmath.Vec3.scale(intentvec, delta))
         %TransformComponent{t|
-          position: %AlloVector{t.position|
-            x: t.position.x + intent.xmovement*delta,
-            z: t.position.z + intent.zmovement*delta
-          },
+          position: Allomath.g2avec(newpos),
           rotation: %AlloVector{
             x: intent.yaw,
             y: intent.pitch,
