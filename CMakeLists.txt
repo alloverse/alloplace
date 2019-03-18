@@ -23,6 +23,6 @@ link_directories(
 
 file(GLOB SOURCES src/*.h src/*.c)
 add_executable(${PROJECT_NAME} ${SOURCES})
-target_link_libraries(${PROJECT_NAME} "ei" "erl_interface" "allonet")
+target_link_libraries(${PROJECT_NAME} "erl_interface" "ei" "allonet")
 
 message(${Erlang_EI_LIBRARIES})
