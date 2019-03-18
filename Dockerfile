@@ -17,4 +17,4 @@ RUN mix deps.get
 
 RUN mix compile
 
-CMD ls -laR && mix run --no-halt
+CMD mix run --no-halt
