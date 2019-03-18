@@ -107,13 +107,13 @@ defmodule AlloPlaceserv.Server do
           Graphmath.Vec3.create(0,1,0),
           intent.yaw
         )
-        Logger.info("Rotating intent #{inspect(intent)} becomes #{inspect(intentvec)}")
+        #Logger.info("Rotating intent #{inspect(intent)} becomes #{inspect(intentvec)}")
         newpos = Graphmath.Vec3.add(Allomath.a2gvec(t.position), Graphmath.Vec3.scale(intentvec, delta))
         %TransformComponent{t|
           position: Allomath.g2avec(newpos),
           rotation: %AlloVector{
-            x: intent.yaw,
-            y: intent.pitch,
+            x: intent.pitch,
+            y: intent.yaw,
             z: 0
           }
         }
