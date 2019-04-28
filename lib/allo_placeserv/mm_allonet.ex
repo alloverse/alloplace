@@ -29,6 +29,11 @@ defmodule AlloPlaceserv.MmAllonet do
     }}
   end
 
+  def channels, do: %{
+    statediffs: 0,
+    commands: 1
+  }
+
   @doc "Send raw byte payload to client"
   def netsend(this, client_id, channel, payload) do
     GenServer.call(this, {:ccall, :send, {client_id, channel, payload}})

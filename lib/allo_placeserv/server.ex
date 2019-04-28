@@ -25,16 +25,23 @@ defmodule ClientIntentPacket do
 end
 
 defmodule Interaction do
-  @derive Jason.Encoder
-  defstruct from_entity: "",
+  defstruct type: "request", # or response oneway publication
+    from_entity: "",
     to_entity: "",
-    cmd: ""
+    request_id: "",
+    body: []
 end
-
-defmodule ClientInteractionPacket do
-  @derive Jason.Encoder
-  defstruct cmd: "interact",
-    interact: %Interaction{}
+defimpl Jason.Encoder, for: Interaction do
+  def encode(struct, opts) do
+    Jason.Encode.list([
+      "interaction",
+      struct.type,
+      struct.from_entity,
+      struct.to_entity,
+      struct.request_id,
+      struct.body
+    ], opts)
+  end
 end
 
 defmodule ClientRef do
@@ -125,11 +132,7 @@ defmodule AlloPlaceserv.Server do
 
     # 3. Broadcast new states
     {:ok, snapshot} = AlloPlaceserv.PlaceStore.get_snapshot(AlloProcs.Store)
-    {:ok, json} = Jason.encode(snapshot)
-    payload = json <> "\n"
-    Enum.each(state.clients, fn({client_id, _client}) ->
-      AlloPlaceserv.MmAllonet.netsend(state.mmallo, client_id, 0, payload)
-    end)
+    send_snapshot(state, snapshot)
     {:noreply, state}
   end
 
@@ -144,15 +147,14 @@ defmodule AlloPlaceserv.Server do
       id: avatar_id
     })
 
-    hellointeraction = %ClientInteractionPacket{
-      interact: %Interaction{
-        from_entity: "place",
-        cmd: "[\"your_avatar\", \"#{avatar_id}\"]"
-      }
-    }
-    {:ok, json} = Jason.encode(hellointeraction)
-    payload = json <> "\n"
-    AlloPlaceserv.MmAllonet.netsend(state.mmallo, client_id, 1, payload)
+    send_interaction(state, client_id, %Interaction{
+      type: "oneway",
+      from_entity: "place",
+      to_entity: "",
+      request_id: "",
+      body: ["your_avatar", avatar_id]
+    })
+    
 
     {
       :ok,
@@ -173,5 +175,30 @@ defmodule AlloPlaceserv.Server do
         clients: Map.delete(state.clients, client_id)
       }
     }
+  end
+
+  defp send_snapshot(state, snapshot) do
+    {:ok, json} = Jason.encode(snapshot)
+    #Logger.info("World: #{inspect(snapshot)}")
+    payload = json <> "\n"
+    Enum.each(state.clients, fn({client_id, _client}) ->
+      AlloPlaceserv.MmAllonet.netsend(
+        state.mmallo,
+        client_id,
+        AlloPlaceserv.MmAllonet.channels.statediffs,
+        payload
+      )
+    end)
+  end
+
+  defp send_interaction(state, client_id, interaction) do
+    {:ok, json} = Jason.encode(interaction)
+    payload = json <> "\n"
+    AlloPlaceserv.MmAllonet.netsend(
+      state.mmallo,
+      client_id,
+      AlloPlaceserv.MmAllonet.channels.commands,
+      payload
+    )
   end
 end
