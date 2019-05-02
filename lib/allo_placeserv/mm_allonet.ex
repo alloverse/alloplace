@@ -29,9 +29,11 @@ defmodule AlloPlaceserv.MmAllonet do
     }}
   end
 
+  @channel_statediffs 0
+  @channel_commands 1
   def channels, do: %{
-    statediffs: 0,
-    commands: 1
+    statediffs: @channel_statediffs,
+    commands: @channel_commands
   }
 
   @doc "Send raw byte payload to client"
@@ -99,16 +101,25 @@ defmodule AlloPlaceserv.MmAllonet do
           :noreply,
           state
         }
-      {:client_sent, client_id, payload} ->
-        parse_payload(client_id, payload, state)
+      {:client_sent, client_id, channel, payload} ->
+        parse_payload(client_id, channel, payload, state)
     end
   end
 
-  defp parse_payload(client_id, payload, state) do
-    # todo: :atoms is dangerous; make sure data conforms to intent record first
-    intent_packet = Jason.decode!(payload, [{:keys, :atoms}])
+  defp parse_payload(client_id, channel, payload, state) do
+    # todo: :atoms is dangerous; make sure data conforms to intent/interaction record first
+    packet = Jason.decode!(payload, [{:keys, :atoms}])
 
-    send(state.delegate, {:client_intent, client_id, intent_packet})
+    # todo: differentiate intents and interactions based on channel!
+
+    msg = case channel do
+      @channel_statediffs ->
+        :client_intent
+      @channel_commands ->
+        :client_interaction
+      end
+    
+    send(state.delegate, {msg, client_id, packet})
     {
       :noreply,
       state

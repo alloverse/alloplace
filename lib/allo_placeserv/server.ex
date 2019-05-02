@@ -103,6 +103,11 @@ defmodule AlloPlaceserv.Server do
     }
   end
 
+  def handle_info({:client_interaction, client_id, interaction_packet}, state) do
+  Logger.info("Unhandled interaction: #{inspect(interaction_packet)}")
+    {:noreply, state}
+  end
+
   @spec handle_info({:timer, float()}, ServerState.t()) :: {:noreply, ServerState.t()}
   def handle_info({:timer, delta}, state) do
     # 1. Transform intents into forces
