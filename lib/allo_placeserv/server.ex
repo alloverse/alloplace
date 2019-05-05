@@ -103,7 +103,7 @@ defmodule AlloPlaceserv.Server do
     }
   end
 
-  def handle_info({:client_interaction, client_id, interaction_packet}, state) do
+  def handle_info({:client_interaction, _client_id, interaction_packet}, state) do
   Logger.info("Unhandled interaction: #{inspect(interaction_packet)}")
     {:noreply, state}
   end

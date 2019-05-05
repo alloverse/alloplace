@@ -18,11 +18,13 @@ defmodule AlloPlaceserv.MmAllonet do
   end
 
   def init(initial_state) do
+    Process.flag(:trap_exit, true)
     port = Port.open({:spawn, "priv/AllonetPort"}, [
       {:packet, 2},
       :binary,
       :nouse_stdio
     ])
+    Process.link port
 
     {:ok, %AllonetState{initial_state|
       port: port
@@ -68,13 +70,17 @@ defmodule AlloPlaceserv.MmAllonet do
 
   def handle_call(:stop, _from, state) do
     send(state.port, {self(), :close})
-    receive do
+    :ok = receive do
       {_port, :closed} ->
         :ok
+      after 1_000 ->
+        :timeout
     end
     { :reply,
       :ok,
-      state
+      %AllonetState{state|
+        delegate: nil
+      }
     }
   end
 
@@ -104,6 +110,23 @@ defmodule AlloPlaceserv.MmAllonet do
       {:client_sent, client_id, channel, payload} ->
         parse_payload(client_id, channel, payload, state)
     end
+  end
+
+  # why is :EXIT callled but not this?
+  def handle_info({_port, {:exit_status, status}}, state) do
+    raise("AllonetPort died unexpectedly: #{status}")
+    {
+      :noreply,
+      state
+    }
+  end
+
+  def handle_info({:EXIT, _port, mode}, state) do
+    raise("AllonetPort died unexpectedly: #{mode}")
+    {
+      :noreply,
+      state
+    }
   end
 
   defp parse_payload(client_id, channel, payload, state) do
