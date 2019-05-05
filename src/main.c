@@ -47,7 +47,7 @@ void handle_erl()
     
     if (strcmp(ERL_ATOM_PTR(command), "disconnect") == 0) {
         scoped_term ETERM* e_client_ptr = erl_element(1, args);
-        void *client_ptr = ERL_LL_UVALUE(e_client_ptr);
+        void *client_ptr = (void*)ERL_LL_UVALUE(e_client_ptr);
         alloserver_client *client;
         LIST_FOREACH(client, &serv->clients, pointers)
         {
@@ -70,7 +70,7 @@ void handle_erl()
         scoped_term ETERM* payload = erl_element(3, args);
         scoped_term ETERM* channel = erl_element(2, args);
         scoped_term ETERM* e_client_ptr = erl_element(1, args);
-        void *client_ptr = ERL_LL_UVALUE(e_client_ptr);
+        void *client_ptr = (void*)ERL_LL_UVALUE(e_client_ptr);
         alloserver_client *client;
         LIST_FOREACH(client, &serv->clients, pointers)
         {
@@ -105,10 +105,10 @@ void handle_erl()
 void clients_changed(alloserver *serv, alloserver_client *added, alloserver_client *removed)
 {
     if(added) {
-        scoped_comp ETERM *msg = erl_format("{client_connected, ~w}", erl_mk_ulonglong(added));
+        scoped_comp ETERM *msg = erl_format("{client_connected, ~w}", erl_mk_ulonglong((unsigned long long)added));
         write_term(msg);
     } else {
-        scoped_comp ETERM *msg = erl_format("{client_disconnected, ~w}", erl_mk_ulonglong(removed));
+        scoped_comp ETERM *msg = erl_format("{client_disconnected, ~w}", erl_mk_ulonglong((unsigned long long)removed));
         write_term(msg);
     }
 }
@@ -116,9 +116,9 @@ void clients_changed(alloserver *serv, alloserver_client *added, alloserver_clie
 void client_sent(alloserver *serv, alloserver_client *client, allochannel channel, const uint8_t *data, size_t data_length)
 {
     scoped_comp ETERM *msg = erl_format(
-        "{client_sent, ~w, ~w, ~w}",
-        erl_mk_ulonglong(client),
-        erl_mk_ulonglong(channel),
+        "{client_sent, ~w, ~i, ~w}",
+        erl_mk_ulonglong((unsigned long long)client),
+        channel,
         erl_mk_binary((const char*)data, data_length)
     );
     write_term(msg);
