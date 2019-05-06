@@ -10,11 +10,11 @@ defmodule AlloPlaceserv.Application do
   def start(_type, _args) do
     children = [
       {Task.Supervisor, name: AlloProcs.TaskSupervisor},
-      {AlloPlaceserv.Server, name: AlloProcs.Serv},
-      {AlloPlaceserv.PlaceStore, name: AlloProcs.Store},
+      {Server, name: AlloProcs.Serv},
+      {PlaceStore, name: AlloProcs.Store},
     ]
 
-    opts = [strategy: :one_for_one, name: AlloPlaceserv.Supervisor]
+    opts = [strategy: :one_for_one, name: Supervisor]
     Supervisor.start_link(children, opts)
   end
 end

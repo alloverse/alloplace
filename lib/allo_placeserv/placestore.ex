@@ -28,7 +28,7 @@ defmodule Entity do
     }
 end
 
-defmodule AlloPlaceserv.PlaceStore do
+defmodule PlaceStore do
   use GenServer
   require Logger
 

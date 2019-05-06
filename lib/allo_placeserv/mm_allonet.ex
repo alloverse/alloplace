@@ -6,7 +6,7 @@ defmodule AllonetState do
     outstanding_requests: %{} # int() -> pid()
 end
 
-defmodule AlloPlaceserv.MmAllonet do
+defmodule MmAllonet do
   use GenServer
   require Logger
 

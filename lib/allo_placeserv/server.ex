@@ -52,7 +52,7 @@ defmodule ClientRef do
   @type t :: %ClientRef{id: String.t(), avatar_id: String.t(), intent: ClientIntent.t()}
 end
 
-defmodule AlloPlaceserv.Server do
+defmodule Server do
   @moduledoc """
   I think this class starts out handling network and manipulating the world state, while
   placestore actually holds it.
@@ -62,12 +62,12 @@ defmodule AlloPlaceserv.Server do
 
   def init(initial_state) do
     Logger.info("Starting Alloverse Place server")
-    {:ok, mmallo} = AlloPlaceserv.MmAllonet.start_link([], self(), 31337)
+    {:ok, mmallo} = MmAllonet.start_link([], self(), 31337)
 
     # update state and send world state @ 20hz
     {:ok, tref} = :timer.send_interval(Kernel.trunc(1000/20), self(), {:timer, 1.0/20})
 
-    reply = AlloPlaceserv.MmAllonet.ping(mmallo)
+    reply = MmAllonet.ping(mmallo)
     Logger.info("C replies? #{reply}")
 
     {:ok, %ServerState{initial_state|
@@ -113,7 +113,7 @@ defmodule AlloPlaceserv.Server do
     # 1. Transform intents into forces
     Enum.each(state.clients, fn({_, client}) ->
       intent = client.intent
-      :ok = AlloPlaceserv.PlaceStore.update_entity(AlloProcs.Store, client.avatar_id, :transform, fn(t) ->
+      :ok = PlaceStore.update_entity(AlloProcs.Store, client.avatar_id, :transform, fn(t) ->
         intentvec = Graphmath.Vec3.rotate(
           Graphmath.Vec3.create(intent.xmovement, 0, intent.zmovement),
           Graphmath.Vec3.create(0,1,0),
@@ -136,7 +136,7 @@ defmodule AlloPlaceserv.Server do
     # ...todo, and make intents modify physprops, not transform
 
     # 3. Broadcast new states
-    {:ok, snapshot} = AlloPlaceserv.PlaceStore.get_snapshot(AlloProcs.Store)
+    {:ok, snapshot} = PlaceStore.get_snapshot(AlloProcs.Store)
     send_snapshot(state, snapshot)
     {:noreply, state}
   end
@@ -148,7 +148,7 @@ defmodule AlloPlaceserv.Server do
 
   defp add_client(client_id,  state) do
     avatar_id = generate_id()
-    :ok = AlloPlaceserv.PlaceStore.add_entity(AlloProcs.Store, %Entity{
+    :ok = PlaceStore.add_entity(AlloProcs.Store, %Entity{
       id: avatar_id
     })
 
@@ -173,7 +173,7 @@ defmodule AlloPlaceserv.Server do
   end
   defp remove_client(client_id, state) do
     {:ok, clientref} = Map.fetch(state.clients, client_id)
-    :ok = AlloPlaceserv.PlaceStore.remove_entity(AlloProcs.Store, clientref.avatar_id)
+    :ok = PlaceStore.remove_entity(AlloProcs.Store, clientref.avatar_id)
     {
       :ok,
       %ServerState{state|
@@ -187,10 +187,10 @@ defmodule AlloPlaceserv.Server do
     #Logger.info("World: #{inspect(snapshot)}")
     payload = json <> "\n"
     Enum.each(state.clients, fn({client_id, _client}) ->
-      AlloPlaceserv.MmAllonet.netsend(
+      MmAllonet.netsend(
         state.mmallo,
         client_id,
-        AlloPlaceserv.MmAllonet.channels.statediffs,
+        MmAllonet.channels.statediffs,
         payload
       )
     end)
@@ -199,10 +199,10 @@ defmodule AlloPlaceserv.Server do
   defp send_interaction(state, client_id, interaction) do
     {:ok, json} = Jason.encode(interaction)
     payload = json <> "\n"
-    AlloPlaceserv.MmAllonet.netsend(
+    MmAllonet.netsend(
       state.mmallo,
       client_id,
-      AlloPlaceserv.MmAllonet.channels.commands,
+      MmAllonet.channels.commands,
       payload
     )
   end

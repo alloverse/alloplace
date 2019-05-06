@@ -1,4 +1,4 @@
-defmodule AlloPlaceserv.MmTcp do
+defmodule MmTcp do
   require Logger
 
   def start(port, parent) do

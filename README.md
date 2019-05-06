@@ -1,4 +1,4 @@
-# AlloPlaceserv
+# Alloverse Placeserv
 
 Server component of Alloverse. Basically a multiplayer game server, but for window manager-y
 things.
