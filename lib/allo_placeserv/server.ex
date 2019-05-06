@@ -30,6 +30,15 @@ defmodule Interaction do
     to_entity: "",
     request_id: "",
     body: []
+  def from_list(["interaction", type, from, to, rid, body]) do
+    %Interaction{
+      type: type,
+      from_entity: from,
+      to_entity: to,
+      request_id: rid,
+      body: body
+    }
+  end
 end
 defimpl Jason.Encoder, for: Interaction do
   def encode(struct, opts) do
@@ -107,7 +116,8 @@ defmodule Server do
   end
 
   def handle_info({:client_interaction, _client_id, interaction_packet}, state) do
-  Logger.info("Unhandled interaction: #{inspect(interaction_packet)}")
+    interaction = Interaction.from_list(interaction_packet)
+    Logger.info("Unhandled interaction: #{inspect(interaction)}")
     {:noreply, state}
   end
 
