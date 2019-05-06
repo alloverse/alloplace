@@ -70,7 +70,10 @@ defmodule Server do
     reply = MmAllonet.ping(mmallo)
     Logger.info("C replies? #{reply}")
 
-    {:ok, %ServerState{initial_state|
+    :ok = PlaceStore.add_entity(AlloProcs.Store, %PlaceEntity{})
+
+    { :ok,
+      %ServerState{initial_state|
       push_state_timer: tref,
       mmallo: mmallo}
     }

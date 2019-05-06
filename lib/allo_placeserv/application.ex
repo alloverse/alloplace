@@ -10,8 +10,8 @@ defmodule AlloPlaceserv.Application do
   def start(_type, _args) do
     children = [
       {Task.Supervisor, name: AlloProcs.TaskSupervisor},
-      {Server, name: AlloProcs.Serv},
       {PlaceStore, name: AlloProcs.Store},
+      {Server, name: AlloProcs.Serv},
     ]
 
     opts = [strategy: :one_for_one, name: Supervisor]
