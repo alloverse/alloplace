@@ -94,10 +94,30 @@ defmodule Server do
     }, opts)
   end
 
+  ### GenServer
+  def handle_info({:client_intent, client_id, intent_packet}, state) do
+    handle_client_intent(client_id, intent_packet, state)
+  end
+  def handle_info({:timer, delta}, state) do
+    handle_timer(delta, state)
+  end
+  def handle_info({:client_interaction, _client_id, interaction_packet}, state) do
+    interaction = Interaction.from_list(interaction_packet)
+    handle_interaction(state, interaction)
+    {:noreply, state}
+  end
+  def handle_info({:new_client, client_id}, state) do
+    {:ok, state} = add_client(client_id, state)
+    {:noreply, state}
+  end
+  def handle_info({:lost_client, client_id}, state) do
+    {:ok, state} = remove_client(client_id, state)
+    {:noreply, state}
+  end
 
   ### Intents
 
-  def handle_info({:client_intent, client_id, intent_packet}, state) do
+  def handle_client_intent(client_id, intent_packet, state) do
     {:noreply, %ServerState{state|
         clients: Map.update!(state.clients, client_id, fn(client) -> %ClientRef{client|
           intent: intent_packet.intent
@@ -106,8 +126,7 @@ defmodule Server do
     }
   end
 
-  @spec handle_info({:timer, float()}, ServerState.t()) :: {:noreply, ServerState.t()}
-  def handle_info({:timer, delta}, state) do
+  def handle_timer(delta, state) do
     # 1. Transform intents into forces
     Enum.each(state.clients, fn({_, client}) ->
       intent = client.intent
@@ -156,10 +175,22 @@ defmodule Server do
 
   ### Interactions
 
-  def handle_info({:client_interaction, _client_id, interaction_packet}, state) do
-    interaction = Interaction.from_list(interaction_packet)
-    Logger.info("Unhandled interaction: #{inspect(interaction)}")
-    {:noreply, state}
+  defp handle_interaction(state, 
+    %Interaction{
+      to_entity: "place"
+    } = interaction
+  ) do
+    PlaceEntity.handle_interaction(state, interaction)
+  end
+  defp handle_interaction(state,
+    %Interaction{
+      to_entity: to
+    } = interaction
+  ) do
+    {:ok, owner_id} = PlaceStore.get_owner_id(AlloProcs.Store, to)
+    client = state.clients[owner_id]
+    Logger.info("Routing interaction #{interaction} to client #{client}")
+    send_interaction(state, owner_id, interaction)
   end
 
   defp send_interaction(state, client_id, interaction) do
@@ -175,24 +206,12 @@ defmodule Server do
 
 
   ### Clients
-
-  def handle_info({:new_client, client_id}, state) do
-    Logger.info("Client connected: #{client_id}")
-    {:ok, state} = add_client(client_id, state)
-    {:noreply, state}
-  end
-
-  def handle_info({:lost_client, client_id}, state) do
-    Logger.info("Client disconnected: #{client_id}")
-    {:ok, state} = remove_client(client_id, state)
-    {:noreply, state}
-  end
-
   defp generate_id() do
     to_string(Enum.take_random(?a..?z, 10))
   end
 
   defp add_client(client_id,  state) do
+    Logger.info("Client connected: #{client_id}")
     avatar_id = generate_id()
     :ok = PlaceStore.add_entity(AlloProcs.Store, %Entity{
       id: avatar_id
@@ -218,6 +237,7 @@ defmodule Server do
     }
   end
   defp remove_client(client_id, state) do
+    Logger.info("Client disconnected: #{client_id}")
     {:ok, clientref} = Map.fetch(state.clients, client_id)
     :ok = PlaceStore.remove_entity(AlloProcs.Store, clientref.avatar_id)
     {

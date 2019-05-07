@@ -21,11 +21,12 @@ end
 
 defmodule Entity do
   @enforce_keys [:id]
-  @derive Jason.Encoder
+  @derive {Jason.Encoder, only: [:id, :components] }
   defstruct id: "",
     components: %{
       transform: %TransformComponent{}
-    }
+    },
+    owner: "" # client_id
 end
 
 defmodule PlaceStore do
@@ -70,6 +71,10 @@ defmodule PlaceStore do
     GenServer.call(server, {:get_snapshot})
   end
 
+  def get_owner_id(server, entity_id) do
+    GenServer.call(server, {:get_owner_id, entity_id})
+  end
+
   ## Server callbacks
   def handle_call({:add_entity, ent}, _from, state) do
     Logger.info "Adding entity #{ent.id}"
@@ -77,6 +82,16 @@ defmodule PlaceStore do
       :ok,
       %{state |
         entities: Map.put(state.entities, ent.id, ent)
+      }
+    }
+  end
+
+  def handle_cast({:remove_entity, entity_id}, state) do
+    new_entities = Map.delete(state.entities, entity_id)
+    Logger.info "Removing entity #{entity_id}, now #{length(Map.keys(new_entities))}"
+    { :noreply,
+      %{state |
+        entities: new_entities
       }
     }
   end
@@ -115,15 +130,16 @@ defmodule PlaceStore do
     }
   end
 
-  def handle_cast({:remove_entity, entity_id}, state) do
-    new_entities = Map.delete(state.entities, entity_id)
-    Logger.info "Removing entity #{entity_id}, now #{length(Map.keys(new_entities))}"
-    { :noreply,
-      %{state |
-        entities: new_entities
-      }
+  def handle_call({:get_owner_id, entity_id}, _from, state) do
+    {:reply,
+      {:ok, 
+        state.entities[entity_id].owner
+      },
+      state
     }
   end
+
+
 
   ## Internals
 
