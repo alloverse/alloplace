@@ -94,17 +94,8 @@ defmodule Server do
     }, opts)
   end
 
-  def handle_info({:new_client, client_id}, state) do
-    Logger.info("Client connected: #{client_id}")
-    {:ok, state} = add_client(client_id, state)
-    {:noreply, state}
-  end
 
-  def handle_info({:lost_client, client_id}, state) do
-    Logger.info("Client disconnected: #{client_id}")
-    {:ok, state} = remove_client(client_id, state)
-    {:noreply, state}
-  end
+  ### Intents
 
   def handle_info({:client_intent, client_id, intent_packet}, state) do
     {:noreply, %ServerState{state|
@@ -113,12 +104,6 @@ defmodule Server do
         } end )
       }
     }
-  end
-
-  def handle_info({:client_interaction, _client_id, interaction_packet}, state) do
-    interaction = Interaction.from_list(interaction_packet)
-    Logger.info("Unhandled interaction: #{inspect(interaction)}")
-    {:noreply, state}
   end
 
   @spec handle_info({:timer, float()}, ServerState.t()) :: {:noreply, ServerState.t()}
@@ -154,7 +139,55 @@ defmodule Server do
     {:noreply, state}
   end
 
-  ### Privates
+  defp send_snapshot(state, snapshot) do
+    {:ok, json} = Jason.encode(snapshot)
+    #Logger.info("World: #{inspect(snapshot)}")
+    payload = json <> "\n"
+    Enum.each(state.clients, fn({client_id, _client}) ->
+      MmAllonet.netsend(
+        state.mmallo,
+        client_id,
+        MmAllonet.channels.statediffs,
+        payload
+      )
+    end)
+  end
+
+
+  ### Interactions
+
+  def handle_info({:client_interaction, _client_id, interaction_packet}, state) do
+    interaction = Interaction.from_list(interaction_packet)
+    Logger.info("Unhandled interaction: #{inspect(interaction)}")
+    {:noreply, state}
+  end
+
+  defp send_interaction(state, client_id, interaction) do
+    {:ok, json} = Jason.encode(interaction)
+    payload = json <> "\n"
+    MmAllonet.netsend(
+      state.mmallo,
+      client_id,
+      MmAllonet.channels.commands,
+      payload
+    )
+  end
+
+
+  ### Clients
+
+  def handle_info({:new_client, client_id}, state) do
+    Logger.info("Client connected: #{client_id}")
+    {:ok, state} = add_client(client_id, state)
+    {:noreply, state}
+  end
+
+  def handle_info({:lost_client, client_id}, state) do
+    Logger.info("Client disconnected: #{client_id}")
+    {:ok, state} = remove_client(client_id, state)
+    {:noreply, state}
+  end
+
   defp generate_id() do
     to_string(Enum.take_random(?a..?z, 10))
   end
@@ -193,30 +226,5 @@ defmodule Server do
         clients: Map.delete(state.clients, client_id)
       }
     }
-  end
-
-  defp send_snapshot(state, snapshot) do
-    {:ok, json} = Jason.encode(snapshot)
-    #Logger.info("World: #{inspect(snapshot)}")
-    payload = json <> "\n"
-    Enum.each(state.clients, fn({client_id, _client}) ->
-      MmAllonet.netsend(
-        state.mmallo,
-        client_id,
-        MmAllonet.channels.statediffs,
-        payload
-      )
-    end)
-  end
-
-  defp send_interaction(state, client_id, interaction) do
-    {:ok, json} = Jason.encode(interaction)
-    payload = json <> "\n"
-    MmAllonet.netsend(
-      state.mmallo,
-      client_id,
-      MmAllonet.channels.commands,
-      payload
-    )
   end
 end
