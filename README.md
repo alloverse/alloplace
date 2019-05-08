@@ -5,6 +5,10 @@ things.
 
 ## Setup 
 
+* `git submodule update --init --recursive`
+
+then...
+
 ### macOS
 * `brew install elixir cmake`
 * `mix deps.get`
