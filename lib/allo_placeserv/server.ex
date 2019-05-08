@@ -163,7 +163,7 @@ defmodule Server do
     #Logger.info("World: #{inspect(snapshot)}")
     payload = json <> "\n"
     Enum.each(state.clients, fn({client_id, _client}) ->
-      MmAllonet.netsend(
+      :ok = MmAllonet.netsend(
         state.mmallo,
         client_id,
         MmAllonet.channels.statediffs,
@@ -175,6 +175,7 @@ defmodule Server do
 
   ### Interactions
 
+  # handle "place" locally
   defp handle_interaction(state, 
     %Interaction{
       to_entity: "place"
@@ -182,21 +183,28 @@ defmodule Server do
   ) do
     PlaceEntity.handle_interaction(state, interaction)
   end
+  # anything else? route it to the owner.
   defp handle_interaction(state,
-    %Interaction{
-      to_entity: to
-    } = interaction
+    %Interaction{} = interaction
   ) do
+    send_interaction(state, interaction)
+  end
+
+  # send to an entity
+  def send_interaction(state, %Interaction{
+      to_entity: to
+    } = interaction) do
     {:ok, owner_id} = PlaceStore.get_owner_id(AlloProcs.Store, to)
-    client = state.clients[owner_id]
-    Logger.info("Routing interaction #{interaction} to client #{client}")
+    _client = state.clients[owner_id]
     send_interaction(state, owner_id, interaction)
   end
 
-  defp send_interaction(state, client_id, interaction) do
+  # send to specific client, if you already know which client owns an entity
+  def send_interaction(state, client_id, interaction) do
+    Logger.info("Sending interaction name #{hd(interaction.body)} to #{client_id}")
     {:ok, json} = Jason.encode(interaction)
     payload = json <> "\n"
-    MmAllonet.netsend(
+    :ok = MmAllonet.netsend(
       state.mmallo,
       client_id,
       MmAllonet.channels.commands,
@@ -214,7 +222,8 @@ defmodule Server do
     Logger.info("Client connected: #{client_id}")
     avatar_id = generate_id()
     :ok = PlaceStore.add_entity(AlloProcs.Store, %Entity{
-      id: avatar_id
+      id: avatar_id,
+      owner: client_id
     })
 
     send_interaction(state, client_id, %Interaction{
