@@ -135,26 +135,30 @@ defmodule Server do
 
   def handle_timer(delta, state) do
     # 1. Transform intents into forces
-    Enum.each(state.clients, fn({_, client}) ->
-      intent = client.intent
-      :ok = PlaceStore.update_entity(AlloProcs.Store, client.avatar_id, :transform, fn(t) ->
-        intentvec = Graphmath.Vec3.rotate(
-          Graphmath.Vec3.create(intent.xmovement, 0, intent.zmovement),
-          Graphmath.Vec3.create(0,1,0),
-          intent.yaw
-        )
-        #Logger.info("Rotating intent #{inspect(intent)} becomes #{inspect(intentvec)}")
-        newpos = Graphmath.Vec3.add(Allomath.a2gvec(t.position), Graphmath.Vec3.scale(intentvec, delta))
-        %TransformComponent{t|
-          position: Allomath.g2avec(newpos),
-          rotation: %AlloVector{
-            x: intent.pitch,
-            y: intent.yaw,
-            z: 0
-          }
-        }
+    state.clients
+      |> Enum.filter(fn {_, client} ->
+        client.avatar_id != nil
       end)
-    end)
+      |> Enum.each(fn({_, client}) ->
+        intent = client.intent
+        :ok = PlaceStore.update_entity(AlloProcs.Store, client.avatar_id, :transform, fn(t) ->
+          intentvec = Graphmath.Vec3.rotate(
+            Graphmath.Vec3.create(intent.xmovement, 0, intent.zmovement),
+            Graphmath.Vec3.create(0,1,0),
+            intent.yaw
+          )
+          #Logger.info("Rotating intent #{inspect(intent)} becomes #{inspect(intentvec)}")
+          newpos = Graphmath.Vec3.add(Allomath.a2gvec(t.position), Graphmath.Vec3.scale(intentvec, delta))
+          %TransformComponent{t|
+            position: Allomath.g2avec(newpos),
+            rotation: %AlloVector{
+              x: intent.pitch,
+              y: intent.yaw,
+              z: 0
+            }
+          }
+        end)
+      end)
 
     # 2. Transform forces into position and rotation changes
     # ...todo, and make intents modify physprops, not transform
