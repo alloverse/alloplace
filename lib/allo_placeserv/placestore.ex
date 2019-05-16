@@ -76,22 +76,22 @@ defmodule PlaceStore do
   end
 
   ## Server callbacks
-  def handle_call({:add_entity, ent}, _from, state) do
-    Logger.info "Adding entity #{ent.id}"
-    { :reply,
-      :ok,
-      %{state |
-        entities: Map.put(state.entities, ent.id, ent)
-      }
-    }
-  end
-
   def handle_cast({:remove_entity, entity_id}, state) do
     new_entities = Map.delete(state.entities, entity_id)
     Logger.info "Removing entity #{entity_id}, now #{length(Map.keys(new_entities))}"
     { :noreply,
       %{state |
         entities: new_entities
+      }
+    }
+  end
+
+  def handle_call({:add_entity, ent}, _from, state) do
+    Logger.info "Adding entity #{ent.id}"
+    { :reply,
+      :ok,
+      %{state |
+        entities: Map.put(state.entities, ent.id, ent)
       }
     }
   end
@@ -132,7 +132,7 @@ defmodule PlaceStore do
 
   def handle_call({:get_owner_id, entity_id}, _from, state) do
     {:reply,
-      {:ok, 
+      {:ok,
         state.entities[entity_id].owner
       },
       state
