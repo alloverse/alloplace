@@ -50,6 +50,9 @@ defmodule PlaceStore do
   def remove_entity(server, entity_id) do
     GenServer.cast(server, {:remove_entity, entity_id})
   end
+  def remove_entities_owned_by(server, owner_id) do
+    GenServer.cast(server, {:remove_entities_owned_by, owner_id})
+  end
 
   @doc """
     Update a specific entity by replacing some of its components with new values
@@ -79,6 +82,15 @@ defmodule PlaceStore do
   def handle_cast({:remove_entity, entity_id}, state) do
     new_entities = Map.delete(state.entities, entity_id)
     Logger.info "Removing entity #{entity_id}, now #{length(Map.keys(new_entities))}"
+    { :noreply,
+      %{state |
+        entities: new_entities
+      }
+    }
+  end
+  def handle_cast({:remove_entities_owned_by, owner_id}, state) do
+    new_entities = Enum.reject(state.entities, fn {_eid, ent} -> ent.owner == owner_id end) |> Enum.into(%{})
+    Logger.info "Removing all entities for owner #{owner_id}, now #{length(Map.keys(new_entities))}"
     { :noreply,
       %{state |
         entities: new_entities

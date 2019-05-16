@@ -53,13 +53,20 @@ defimpl Jason.Encoder, for: Interaction do
   end
 end
 
+defmodule ClientIdentity do
+  @derive Jason.Encoder
+  defstruct displayName: ""
+end
+
 defmodule ClientRef do
-  @enforce_keys [:id, :avatar_id]
+  @enforce_keys [:id]
   defstruct id: nil,
+    identity: %ClientIdentity{},
     avatar_id: nil,
     intent: %ClientIntent{}
   @type t :: %ClientRef{id: String.t(), avatar_id: String.t(), intent: ClientIntent.t()}
 end
+
 
 defmodule Server do
   @moduledoc """
@@ -101,9 +108,9 @@ defmodule Server do
   def handle_info({:timer, delta}, state) do
     handle_timer(delta, state)
   end
-  def handle_info({:client_interaction, _client_id, interaction_packet}, state) do
+  def handle_info({:client_interaction, client_id, interaction_packet}, state) do
     interaction = Interaction.from_list(interaction_packet)
-    handle_interaction(state, interaction)
+    {:ok, state} = handle_interaction(state, client_id, interaction)
     {:noreply, state}
   end
   def handle_info({:new_client, client_id}, state) do
@@ -176,18 +183,21 @@ defmodule Server do
   ### Interactions
 
   # handle "place" locally
-  defp handle_interaction(state, 
+  defp handle_interaction(state,
+  from_client,
     %Interaction{
       to_entity: "place"
     } = interaction
   ) do
-    PlaceEntity.handle_interaction(state, interaction)
+    PlaceEntity.handle_interaction(state, from_client, interaction)
   end
   # anything else? route it to the owner.
   defp handle_interaction(state,
+    _from_client,
     %Interaction{} = interaction
   ) do
     send_interaction(state, interaction)
+    {:ok, state}
   end
 
   # send to an entity
@@ -214,41 +224,21 @@ defmodule Server do
 
 
   ### Clients
-  defp generate_id() do
-    to_string(Enum.take_random(?a..?z, 10))
-  end
-
   defp add_client(client_id,  state) do
     Logger.info("Client connected: #{client_id}")
-    avatar_id = generate_id()
-    :ok = PlaceStore.add_entity(AlloProcs.Store, %Entity{
-      id: avatar_id,
-      owner: client_id
-    })
-
-    send_interaction(state, client_id, %Interaction{
-      type: "oneway",
-      from_entity: "place",
-      to_entity: "",
-      request_id: "",
-      body: ["your_avatar", avatar_id]
-    })
-    
-
     {
       :ok,
       %ServerState{state|
         clients: Map.put(state.clients, client_id, %ClientRef{
-          id: client_id,
-          avatar_id: avatar_id
+          id: client_id
         })
       }
     }
   end
   defp remove_client(client_id, state) do
     Logger.info("Client disconnected: #{client_id}")
-    {:ok, clientref} = Map.fetch(state.clients, client_id)
-    :ok = PlaceStore.remove_entity(AlloProcs.Store, clientref.avatar_id)
+    {:ok, _clientref} = Map.fetch(state.clients, client_id)
+    :ok = PlaceStore.remove_entities_owned_by(AlloProcs.Store, client_id)
     {
       :ok,
       %ServerState{state|
