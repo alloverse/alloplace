@@ -112,6 +112,7 @@ defmodule Server do
   def handle_info({:client_interaction, from_client_id, interaction_packet}, state) do
     interaction = Interaction.from_list(interaction_packet)
     from_client = state.clients[from_client_id]
+    Logger.info("From #{from_client_id}, #{inspect(interaction)}")
 
     # ensure valid from (note: pattern match)
     if interaction.from_entity != "" do
@@ -119,11 +120,11 @@ defmodule Server do
     end
 
     # ensure announced
-    true = (from_client.avatar_id != nil || interaction.body.hd == "announce")
+    true = (from_client.avatar_id != nil || hd(interaction.body) == "announce")
 
     # go handle
-    handle_interaction(state, from_client, interaction)
-    {:noreply, state}
+    {:ok, newstate} = handle_interaction(state, from_client, interaction)
+    {:noreply, newstate}
   end
   def handle_info({:new_client, client_id}, state) do
     {:ok, state} = add_client(client_id, state)
@@ -197,7 +198,7 @@ defmodule Server do
 
   # handle "place" locally
   defp handle_interaction(state,
-  from_client,
+    from_client,
     %Interaction{
       to_entity: "place"
     } = interaction
@@ -239,6 +240,10 @@ defmodule Server do
   ### Clients
   defp add_client(client_id,  state) do
     Logger.info("Client connected: #{client_id}")
+<<<<<<< HEAD
+=======
+    
+>>>>>>> Move avatar spawning to placeentity
     {
       :ok,
       %ServerState{state|
