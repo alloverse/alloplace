@@ -21,7 +21,10 @@ defmodule PlaceEntity do
         avatar_id = Allomisc.generate_id()
         :ok = PlaceStore.add_entity(AlloProcs.Store, %Entity{
             id: avatar_id,
-            owner: client.id
+            owner: client.id,
+            components: Map.merge(avatardesc, %{
+                transform: %TransformComponent{}
+            })
         })
 
         response = %Interaction {
