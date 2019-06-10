@@ -167,8 +167,9 @@ defmodule Server do
             y: intent.yaw,
             z: 0
           }
-        end)
+        }
       end)
+    end)
 
     # 2. Transform forces into position and rotation changes
     # ...todo, and make intents modify physprops, not transform
