@@ -38,7 +38,8 @@ defmodule PlaceEntity do
 
         {:ok, %ServerState{server_state|
             clients: Map.update!(server_state.clients, client.id, fn(client) -> %ClientRef{client|
-                avatar_id: avatar_id
+                avatar_id: avatar_id,
+                identity: identity
             } end )
         }
     }

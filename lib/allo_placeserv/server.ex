@@ -55,7 +55,7 @@ end
 
 defmodule ClientIdentity do
   @derive Jason.Encoder
-  defstruct displayName: ""
+  defstruct display_name: nil
 end
 
 defmodule ClientRef do
@@ -240,10 +240,6 @@ defmodule Server do
   ### Clients
   defp add_client(client_id,  state) do
     Logger.info("Client connected: #{client_id}")
-<<<<<<< HEAD
-=======
-    
->>>>>>> Move avatar spawning to placeentity
     {
       :ok,
       %ServerState{state|
