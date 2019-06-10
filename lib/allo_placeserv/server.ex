@@ -108,9 +108,21 @@ defmodule Server do
   def handle_info({:timer, delta}, state) do
     handle_timer(delta, state)
   end
-  def handle_info({:client_interaction, client_id, interaction_packet}, state) do
+
+  def handle_info({:client_interaction, from_client_id, interaction_packet}, state) do
     interaction = Interaction.from_list(interaction_packet)
-    {:ok, state} = handle_interaction(state, client_id, interaction)
+    from_client = state.clients[from_client_id]
+
+    # ensure valid from (note: pattern match)
+    if interaction.from_entity != "" do
+      {:ok, from_client_id} = PlaceStore.get_owner_id(AlloProcs.Store, interaction.from_entity)
+    end
+
+    # ensure announced
+    true = (from_client.avatar_id != nil || interaction.body.hd == "announce")
+
+    # go handle
+    handle_interaction(state, from_client, interaction)
     {:noreply, state}
   end
   def handle_info({:new_client, client_id}, state) do
@@ -135,27 +147,24 @@ defmodule Server do
 
   def handle_timer(delta, state) do
     # 1. Transform intents into forces
-    state.clients
-      |> Enum.filter(fn {_, client} ->
-        client.avatar_id != nil
-      end)
-      |> Enum.each(fn({_, client}) ->
-        intent = client.intent
-        :ok = PlaceStore.update_entity(AlloProcs.Store, client.avatar_id, :transform, fn(t) ->
-          intentvec = Graphmath.Vec3.rotate(
-            Graphmath.Vec3.create(intent.xmovement, 0, intent.zmovement),
-            Graphmath.Vec3.create(0,1,0),
-            intent.yaw
-          )
-          #Logger.info("Rotating intent #{inspect(intent)} becomes #{inspect(intentvec)}")
-          newpos = Graphmath.Vec3.add(Allomath.a2gvec(t.position), Graphmath.Vec3.scale(intentvec, delta))
-          %TransformComponent{t|
-            position: Allomath.g2avec(newpos),
-            rotation: %AlloVector{
-              x: intent.pitch,
-              y: intent.yaw,
-              z: 0
-            }
+    state.clients |> Enum.filter(fn {_, client} ->
+      client.avatar_id != nil
+    end) |> Enum.each(fn({_, client}) ->
+      intent = client.intent
+      :ok = PlaceStore.update_entity(AlloProcs.Store, client.avatar_id, :transform, fn(t) ->
+        intentvec = Graphmath.Vec3.rotate(
+          Graphmath.Vec3.create(intent.xmovement, 0, intent.zmovement),
+          Graphmath.Vec3.create(0,1,0),
+          intent.yaw
+        )
+        #Logger.info("Rotating intent #{inspect(intent)} becomes #{inspect(intentvec)}")
+        newpos = Graphmath.Vec3.add(Allomath.a2gvec(t.position), Graphmath.Vec3.scale(intentvec, delta))
+        %TransformComponent{t|
+          position: Allomath.g2avec(newpos),
+          rotation: %AlloVector{
+            x: intent.pitch,
+            y: intent.yaw,
+            z: 0
           }
         end)
       end)
@@ -208,19 +217,19 @@ defmodule Server do
   def send_interaction(state, %Interaction{
       to_entity: to
     } = interaction) do
-    {:ok, owner_id} = PlaceStore.get_owner_id(AlloProcs.Store, to)
-    _client = state.clients[owner_id]
-    send_interaction(state, owner_id, interaction)
+    {:ok, dest_owner_id} = PlaceStore.get_owner_id(AlloProcs.Store, to)
+    _dest_client = state.clients[dest_owner_id]
+    send_interaction(state, dest_owner_id, interaction)
   end
 
   # send to specific client, if you already know which client owns an entity
-  def send_interaction(state, client_id, interaction) do
-    Logger.info("Sending interaction name #{hd(interaction.body)} to #{client_id}")
+  def send_interaction(state, dest_client_id, interaction) do
+    Logger.info("Sending interaction name #{hd(interaction.body)} to #{dest_client_id}")
     {:ok, json} = Jason.encode(interaction)
     payload = json <> "\n"
     :ok = MmAllonet.netsend(
       state.mmallo,
-      client_id,
+      dest_client_id,
       MmAllonet.channels.commands,
       payload
     )
