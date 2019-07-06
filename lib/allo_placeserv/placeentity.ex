@@ -3,14 +3,18 @@ defmodule PlaceEntity do
     @moduledoc """
     The server-side entity that represents the place itself.
     You send RPCs to it to change the room itself, e g to spawn new entites.
+    Must duck-type Entity.
     """
     require Logger
 
     @derive Jason.Encoder
     defstruct id: "place",
-        components: %{}
+        owner: "",
+        components: %{
+            transform: %TransformComponent{}
+        }
 
-    def handle_interaction(server_state, 
+    def handle_interaction(server_state,
         client,
         %Interaction{
             :body => ["announce", "version", 1, "identity", identity, "spawn_avatar", avatardesc]
@@ -45,7 +49,7 @@ defmodule PlaceEntity do
     }
     end
 
-    def handle_interaction(server_state, 
+    def handle_interaction(server_state,
         _client,
         %Interaction{
             :body => ["lol", _a, _b, _c]
