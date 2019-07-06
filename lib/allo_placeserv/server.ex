@@ -226,8 +226,8 @@ defmodule Server do
 
   # send to specific client, if you already know which client owns an entity
   def send_interaction(state, dest_client_id, interaction) do
-    Logger.info("Sending interaction name #{hd(interaction.body)} to #{dest_client_id}")
     {:ok, json} = Jason.encode(interaction)
+    Logger.info("Sending interaction #{json} to #{dest_client_id}")
     payload = json <> "\n"
     :ok = MmAllonet.netsend(
       state.mmallo,
