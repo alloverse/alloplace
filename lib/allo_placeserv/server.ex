@@ -1,7 +1,8 @@
 defmodule ServerState do
   defstruct clients: %{}, # from client_id to ClientRef
     mmallo: nil,
-    push_state_timer: nil
+    push_state_timer: nil,
+    name: "Unnamed place"
 
   @type t :: %ServerState{
     clients: %{required(String.t()) => ClientRef.t()},
@@ -77,7 +78,7 @@ defmodule Server do
   require Logger
 
   def init(initial_state) do
-    Logger.info("Starting Alloverse Place server")
+    Logger.info("Starting Alloverse Place server '#{initial_state.name}'")
     {:ok, mmallo} = MmAllonet.start_link([], self(), 31337)
 
     # update state and send world state @ 20hz
@@ -96,8 +97,9 @@ defmodule Server do
   end
 
   def start_link(opts) do
+    name = System.get_env("ALLOPLACE_NAME", "Unnamed place")
     GenServer.start_link(__MODULE__, %ServerState{
-
+      name: name
     }, opts)
   end
 
