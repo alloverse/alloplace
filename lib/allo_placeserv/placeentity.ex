@@ -36,7 +36,7 @@ defmodule PlaceEntity do
             to_entity: interaction.from_entity,
             request_id: interaction.request_id,
             type: "response",
-            body: ["announce", avatar_id]
+            body: ["announce", avatar_id, server_state.name]
         }
         Server.send_interaction(server_state, client.id, response)
 
