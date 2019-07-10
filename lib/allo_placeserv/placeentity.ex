@@ -52,6 +52,15 @@ defmodule PlaceEntity do
     def handle_interaction(server_state,
         _client,
         %Interaction{
+            :body => ["point", finger, hit]
+        } = interaction
+    ) do
+        {:ok, server_state}
+    end
+
+    def handle_interaction(server_state,
+        _client,
+        %Interaction{
             :body => ["lol", _a, _b, _c]
         } = interaction
     ) do
