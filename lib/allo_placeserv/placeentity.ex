@@ -52,15 +52,6 @@ defmodule PlaceEntity do
     def handle_interaction(server_state,
         _client,
         %Interaction{
-            :body => ["point", finger, hit]
-        } = interaction
-    ) do
-        {:ok, server_state}
-    end
-
-    def handle_interaction(server_state,
-        _client,
-        %Interaction{
             :body => ["lol", _a, _b, _c]
         } = interaction
     ) do
@@ -75,6 +66,33 @@ defmodule PlaceEntity do
 
         Server.send_interaction(server_state, response)
 
+        {:ok, server_state}
+    end
+
+    def handle_interaction(server_state,
+        _client,
+        %Interaction{
+            :type => "request"
+        } = interaction
+    ) do
+        Logger.info("Unhandled place request interaction: #{inspect(interaction)}")
+        response = %Interaction {
+            from_entity: "place",
+            to_entity: interaction.from_entity,
+            request_id: interaction.request_id,
+            type: "response",
+            body: [hd(interaction.body), "failed", "#{server_state.name} doesn't understand #{hd(interaction.body)}"]
+        }
+        Server.send_interaction(server_state, response)
+
+        {:ok, server_state}
+    end
+    def handle_interaction(server_state,
+        _client,
+        %Interaction{
+        } = interaction
+    ) do
+        Logger.info("Unhandled place interaction: #{inspect(interaction)}")
         {:ok, server_state}
     end
 
