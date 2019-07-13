@@ -187,7 +187,7 @@ defmodule Server do
     #Logger.info("World: #{inspect(snapshot)}")
     payload = json <> "\n"
     Enum.each(state.clients, fn({client_id, _client}) ->
-      :ok = MmAllonet.netsend(
+      MmAllonet.netsend(
         state.mmallo,
         client_id,
         MmAllonet.channels.statediffs,
