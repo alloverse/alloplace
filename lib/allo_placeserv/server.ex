@@ -11,6 +11,27 @@ defmodule ServerState do
   }
 end
 
+defmodule Pose do
+  @derive Jason.Encoder
+  defstruct position: %AlloVector{},
+    rotation: %AlloVector{}
+end
+
+defmodule Poses do
+  defstruct head: %Pose{},
+    lefthand: %Pose{},
+    righthand: %Pose{}
+end
+defimpl Jason.Encoder, for: Poses do
+  def encode(value, opts) do
+    Jason.Encode.map(%{
+      head: value.head,
+      "hand/left": value.lefthand,
+      "hand/right": value.righthand
+    }, opts)
+  end
+end
+
 defmodule ClientIntent do
   @derive Jason.Encoder
   defstruct zmovement: 0,
