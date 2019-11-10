@@ -19,12 +19,18 @@ defmodule TransformComponent do
     rotation: %AlloVector{}
 end
 
+defmodule RelationshipsComponent do
+  @derive Jason.Encoder
+  defstruct parent: nil
+end
+
 defmodule Entity do
   @enforce_keys [:id]
   @derive {Jason.Encoder, only: [:id, :components] }
   defstruct id: "",
     components: %{
-      transform: %TransformComponent{}
+      transform: %TransformComponent{},
+      relationships: %RelationshipsComponent{}
     },
     owner: "" # client_id
 end

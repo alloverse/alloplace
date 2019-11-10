@@ -22,7 +22,7 @@ defmodule PlaceEntity do
     ) do
         Logger.info("Client announce: #{inspect(interaction)}")
 
-        avatars = entities_for_desc(avatardesc, client.id)
+        avatars = entities_for_desc(avatardesc, client.id, %RelationshipsComponent{})
         true = Enum.all?(
             Enum.map(avatars, fn avatar ->
                PlaceStore.add_entity(AlloProcs.Store, avatar)
@@ -98,18 +98,19 @@ defmodule PlaceEntity do
     end
 
 
-    defp entities_for_desc(desc, owner) do
+    defp entities_for_desc(desc, owner, relationships) do
         {childDescs, thisDesc} = Map.pop(desc, :children, [])
         thisEnt = %Entity{
             id: Allomisc.generate_id(),
             owner: owner,
             components: Map.merge(thisDesc, %{
-                transform: %TransformComponent{}
+                transform: %TransformComponent{},
+                relationships: relationships
             })
         }
         Logger.info("Children: #{inspect(childDescs)}")
         childEnts = Enum.flat_map(childDescs, fn childDesc ->
-            entities_for_desc(childDesc, owner)
+            entities_for_desc(childDesc, owner, %RelationshipsComponent{parent: thisEnt.id})
         end)
         List.insert_at(childEnts, 0, thisEnt)
     end
