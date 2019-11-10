@@ -18,32 +18,17 @@ defmodule Pose do
 end
 
 defmodule Poses do
-  defstruct head: %Pose{},
-    lefthand: %Pose{},
-    righthand: %Pose{}
-end
-defimpl Jason.Encoder, for: Poses do
-  def encode(value, opts) do
-    Jason.Encode.map(%{
-      head: value.head,
-      "hand/left": value.lefthand,
-      "hand/right": value.righthand
-    }, opts)
-  end
+  defstruct [:head, :"hand/left", :"hand/right"]
 end
 
 defmodule ClientIntent do
-  @derive Jason.Encoder
+  @derive Poison.Encoder
   defstruct zmovement: 0,
     xmovement: 0,
     yaw: 0,
-    pitch: 0
-    @type t :: %ClientIntent{zmovement: float, xmovement: float, yaw: float, pitch: float}
-end
-
-defmodule ClientIntentPacket do
-  @derive Jason.Encoder
-  defstruct intent: %ClientIntent{}
+    pitch: 0,
+    poses: %Poses{}
+    @type t :: %ClientIntent{zmovement: float, xmovement: float, yaw: float, pitch: float, poses: Poses.t()}
 end
 
 defmodule Interaction do
@@ -160,10 +145,10 @@ defmodule Server do
 
   ### Intents
 
-  def handle_client_intent(client_id, intent_packet, state) do
+  def handle_client_intent(client_id, intent, state) do
     {:noreply, %ServerState{state|
         clients: Map.update!(state.clients, client_id, fn(client) -> %ClientRef{client|
-          intent: intent_packet.intent
+          intent: intent
         } end )
       }
     }

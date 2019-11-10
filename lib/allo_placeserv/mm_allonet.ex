@@ -6,6 +6,12 @@ defmodule AllonetState do
     outstanding_requests: %{} # int() -> pid()
 end
 
+
+defmodule ClientIntentPacket do
+    defstruct cmd: "intent",
+      intent: %ClientIntent{}
+end
+
 defmodule MmAllonet do
   use GenServer
   require Logger
@@ -129,23 +135,23 @@ defmodule MmAllonet do
     }
   end
 
-  defp parse_payload(client_id, channel, payload, state) do
-    # todo: :atoms is dangerous; make sure data conforms to intent/interaction record first
-    packet = Jason.decode!(payload, [{:keys, :atoms}])
+  defp parse_payload(client_id, @channel_statediffs, payload, state) do
+    packet = Poison.decode!(payload, as: %ClientIntentPacket{})
 
-    # todo: differentiate intents and interactions based on channel!
-
-    msg = case channel do
-      @channel_statediffs ->
-        :client_intent
-      @channel_commands ->
-        :client_interaction
-      end
-    
-    send(state.delegate, {msg, client_id, packet})
+    send(state.delegate, {:client_intent, client_id, packet.intent})
     {
       :noreply,
       state
     }
   end
+  defp parse_payload(client_id, @channel_commands, payload, state) do
+    # todo: :atoms is dangerous; make sure data conforms to intent/interaction record first
+    packet = Jason.decode!(payload, [{:keys, :atoms}])
+    send(state.delegate, {:client_interaction, client_id, packet})
+    {
+      :noreply,
+      state
+    }
+  end
+
 end
