@@ -22,27 +22,28 @@ defmodule PlaceEntity do
     ) do
         Logger.info("Client announce: #{inspect(interaction)}")
 
-        avatar_id = Allomisc.generate_id()
-        :ok = PlaceStore.add_entity(AlloProcs.Store, %Entity{
-            id: avatar_id,
-            owner: client.id,
-            components: Map.merge(avatardesc, %{
-                transform: %TransformComponent{}
-            })
-        })
+        avatars = entities_for_desc(avatardesc, client.id)
+        true = Enum.all?(
+            Enum.map(avatars, fn avatar ->
+               PlaceStore.add_entity(AlloProcs.Store, avatar)
+            end), fn result ->
+               result == :ok
+            end
+        )
+        avatar = hd(avatars)
 
         response = %Interaction {
             from_entity: "place",
             to_entity: interaction.from_entity,
             request_id: interaction.request_id,
             type: "response",
-            body: ["announce", avatar_id, server_state.name]
+            body: ["announce", avatar.id, server_state.name]
         }
         Server.send_interaction(server_state, client.id, response)
 
         {:ok, %ServerState{server_state|
             clients: Map.update!(server_state.clients, client.id, fn(client) -> %ClientRef{client|
-                avatar_id: avatar_id,
+                avatar_id: avatar.id,
                 identity: identity
             } end )
         }
@@ -96,4 +97,20 @@ defmodule PlaceEntity do
         {:ok, server_state}
     end
 
+
+    defp entities_for_desc(desc, owner) do
+        {childDescs, thisDesc} = Map.pop(desc, :children, [])
+        thisEnt = %Entity{
+            id: Allomisc.generate_id(),
+            owner: owner,
+            components: Map.merge(thisDesc, %{
+                transform: %TransformComponent{}
+            })
+        }
+        Logger.info("Children: #{inspect(childDescs)}")
+        childEnts = Enum.flat_map(childDescs, fn childDesc ->
+            entities_for_desc(childDesc, owner)
+        end)
+        List.insert_at(childEnts, 0, thisEnt)
+    end
 end
