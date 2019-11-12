@@ -136,7 +136,7 @@ defmodule MmAllonet do
   end
 
   defp parse_payload(client_id, @channel_statediffs, payload, state) do
-    packet = Poison.decode!(payload, as: %ClientIntentPacket{})
+    packet = Poison.decode!(payload, as: %ClientIntentPacket{}, keys: :atoms)
 
     send(state.delegate, {:client_intent, client_id, packet.intent})
     {

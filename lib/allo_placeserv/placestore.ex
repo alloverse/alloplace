@@ -24,13 +24,19 @@ defmodule RelationshipsComponent do
   defstruct parent: nil
 end
 
+defmodule IntentComponent do
+  @derive Jason.Encoder
+  defstruct actuate_pose: nil
+end
+
 defmodule Entity do
   @enforce_keys [:id]
   @derive {Jason.Encoder, only: [:id, :components] }
   defstruct id: "",
     components: %{
       transform: %TransformComponent{},
-      relationships: %RelationshipsComponent{}
+      relationships: %RelationshipsComponent{},
+      intent: %IntentComponent{}
     },
     owner: "" # client_id
 end
@@ -75,6 +81,9 @@ defmodule PlaceStore do
   """
   def update_entity(server, entity_id, component_name, fun) do
     GenServer.call(server, {:update_entity, entity_id, component_name, fun})
+  end
+  def find_entity(server, fun) do
+    GenServer.call(server, {:find_entity, fun})
   end
   def get_snapshot(server) do
     GenServer.call(server, {:get_snapshot})
@@ -136,6 +145,16 @@ defmodule PlaceStore do
           end)
         } end )
       }
+    }
+  end
+
+  def handle_call({:find_entity, fun}, _from, state) do
+    { :reply,
+      case Enum.find(state.entities, nil, fun) do
+        nil -> {:error, :notfound}
+        {_key, ent} -> {:ok, ent}
+      end,
+      state
     }
   end
 

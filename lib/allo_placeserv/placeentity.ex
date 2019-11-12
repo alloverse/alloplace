@@ -108,7 +108,6 @@ defmodule PlaceEntity do
                 relationships: relationships
             })
         }
-        Logger.info("Children: #{inspect(childDescs)}")
         childEnts = Enum.flat_map(childDescs, fn childDesc ->
             entities_for_desc(childDesc, owner, %RelationshipsComponent{parent: thisEnt.id})
         end)

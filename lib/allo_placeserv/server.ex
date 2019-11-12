@@ -159,6 +159,7 @@ defmodule Server do
     state.clients |> Enum.filter(fn {_, client} ->
       client.avatar_id != nil
     end) |> Enum.each(fn({_, client}) ->
+      # Go through each client intent and update the main avatar entity accordingly.
       intent = client.intent
       :ok = PlaceStore.update_entity(AlloProcs.Store, client.avatar_id, :transform, fn(t) ->
         intentvec = Graphmath.Vec3.rotate(
@@ -176,6 +177,23 @@ defmodule Server do
             z: 0
           }
         }
+      end)
+
+      # Go through each client intent pose and find matching entities if any, and override their transforms.
+      intent.poses |> Map.from_struct() |> Enum.each(fn {poseName, pose} ->
+        poseNameStr = Atom.to_string(poseName)
+        case PlaceStore.find_entity(AlloProcs.Store, fn {_id, e}  ->
+          e.owner == client.id && Map.get(e.components, :intent, %IntentComponent{}).actuate_pose == poseNameStr
+        end) do
+          {:error, :notfound} -> nil
+          {:ok, entity} ->
+            :ok = PlaceStore.update_entity(AlloProcs.Store, entity.id, :transform, fn(_) ->
+              %TransformComponent{
+                position: pose.position,
+                rotation: pose.rotation
+              }
+            end)
+        end
       end)
     end)
 
