@@ -180,7 +180,10 @@ defmodule Server do
       end)
 
       # Go through each client intent pose and find matching entities if any, and override their transforms.
-      intent.poses |> Map.from_struct() |> Enum.each(fn {poseName, pose} ->
+      intent.poses
+        |> Map.from_struct()
+        |> Enum.filter(fn {poseName, pose} -> !is_nil(pose) end)
+        |> Enum.each(fn {poseName, pose} ->
         poseNameStr = Atom.to_string(poseName)
         case PlaceStore.find_entity(AlloProcs.Store, fn {_id, e}  ->
           e.owner == client.id && Map.get(e.components, :intent, %IntentComponent{}).actuate_pose == poseNameStr
