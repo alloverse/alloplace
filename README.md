@@ -19,7 +19,7 @@ then...
 * `sudo dpkg -i erlang-solutions_1.0_all.deb; rm erlang-solutions_1.0_all.deb`
 * `sudo apt-get update`
 * `sudo apt-get install esl-erlang`
-* `sudo apt-get install elixir cmake clang`
+* `sudo apt-get install elixir cmake clang openssl`
 * `mix deps.get`
 
 ## Run
