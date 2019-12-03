@@ -6,17 +6,15 @@ end
 
 # Todo: schema for component that generates these in elixir and c and c#...
 
-defmodule AlloVector do
-  @derive Jason.Encoder
-  defstruct x: 0.0,
-    y: 0.0,
-    z: 0.0
-end
-
 defmodule TransformComponent do
-  @derive Jason.Encoder
-  defstruct position: %AlloVector{},
-    rotation: %AlloVector{}
+  defstruct matrix: Graphmath.Mat44.identity()
+end
+defimpl Jason.Encoder, for: TransformComponent do
+  def encode(struct, opts) do
+    Jason.Encode.map(%{
+      matrix: Tuple.to_list(struct.matrix)
+    }, opts)
+  end
 end
 
 defmodule RelationshipsComponent do
