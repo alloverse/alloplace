@@ -12,17 +12,34 @@ defmodule ServerState do
 end
 
 defmodule Pose do
-  @derive Jason.Encoder
-  defstruct position: %AlloVector{},
-    rotation: %AlloVector{}
+  defstruct matrix: Graphmath.Mat44.identity()
+end
+defimpl Poison.Decoder, for: Pose do
+  # Convert matrix from list to Mat44, and transpose to convert from column-major (allonet protocol) to row-major (GraphMath)
+  def decode(value, _options) do
+    %Pose{
+      matrix: Graphmath.Mat44.multiply_transpose(Graphmath.Mat44.identity(), List.to_tuple(value.matrix))
+    }
+  end
 end
 
+
 defmodule Poses do
-  defstruct [:head, :"hand/left", :"hand/right"]
+  # can't use defstruct because some keys aren't regular atoms
+  def __struct__() do
+    %{
+      :__struct__ => __MODULE__, 
+      :head => %Pose{}, 
+      :"hand/left" => %Pose{}, 
+      :"hand/right" => %Pose{}
+    }
+  end
+  def __struct__(kv) do
+    :lists.foldl(fn {key, val}, acc -> Map.replace!(acc, key, val) end, Poses.__struct__(), kv)
+  end
 end
 
 defmodule ClientIntent do
-  @derive Poison.Encoder
   defstruct zmovement: 0,
     xmovement: 0,
     yaw: 0,
@@ -162,42 +179,49 @@ defmodule Server do
       # Go through each client intent and update the main avatar entity accordingly.
       intent = client.intent
       :ok = PlaceStore.update_entity(AlloProcs.Store, client.avatar_id, :transform, fn(t) ->
-        intentvec = Graphmath.Vec3.rotate(
-          Graphmath.Vec3.create(intent.xmovement, 0, intent.zmovement),
-          Graphmath.Vec3.create(0,1,0),
-          intent.yaw
+        # move at 1m/s
+        distance = delta * 1.0
+
+        # Intent movement is camera yaw-relative
+        movement = 
+          Graphmath.Mat44.multiply(
+            Graphmath.Mat44.make_translate(intent.xmovement * distance, 0, intent.zmovement * distance),
+            Graphmath.Mat44.make_rotate_y(intent.yaw)
+          )
+        
+        # Discard everything in old matrix except position...
+        {x, y, z} = Graphmath.Mat44.transform_point(t.matrix, Graphmath.Vec3.create())
+        # .. then add old position, intent movement, and replace rotation with intent rotation.
+        matrix = Graphmath.Mat44.multiply(
+          Graphmath.Mat44.multiply(
+            Graphmath.Mat44.make_translate(x, y, z),
+            movement
+          ),
+          Graphmath.Mat44.make_rotate_y(intent.yaw)
         )
-        #Logger.info("Rotating intent #{inspect(intent)} becomes #{inspect(intentvec)}")
-        newpos = Graphmath.Vec3.add(Allomath.a2gvec(t.position), Graphmath.Vec3.scale(intentvec, delta))
         %TransformComponent{t|
-          position: Allomath.g2avec(newpos),
-          rotation: %AlloVector{
-            x: intent.pitch,
-            y: intent.yaw,
-            z: 0
-          }
+          matrix: matrix
         }
       end)
 
       # Go through each client intent pose and find matching entities if any, and override their transforms.
       intent.poses
         |> Map.from_struct()
-        |> Enum.filter(fn {poseName, pose} -> !is_nil(pose) end)
+        |> Enum.filter(fn {_poseName, pose} -> !is_nil(pose) end)
         |> Enum.each(fn {poseName, pose} ->
-        poseNameStr = Atom.to_string(poseName)
-        case PlaceStore.find_entity(AlloProcs.Store, fn {_id, e}  ->
-          e.owner == client.id && Map.get(e.components, :intent, %IntentComponent{}).actuate_pose == poseNameStr
-        end) do
+          poseNameStr = Atom.to_string(poseName)
+          case PlaceStore.find_entity(AlloProcs.Store, fn {_id, e}  ->
+            e.owner == client.id && Map.get(e.components, :intent, %IntentComponent{}).actuate_pose == poseNameStr
+          end) do
           {:error, :notfound} -> nil
           {:ok, entity} ->
             :ok = PlaceStore.update_entity(AlloProcs.Store, entity.id, :transform, fn(_) ->
               %TransformComponent{
-                position: pose.position,
-                rotation: pose.rotation
+                matrix: pose.matrix
               }
             end)
-        end
-      end)
+          end
+        end)
     end)
 
     # 2. Transform forces into position and rotation changes
