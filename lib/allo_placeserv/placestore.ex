@@ -29,6 +29,15 @@ defmodule IntentComponent do
   defstruct actuate_pose: nil
 end
 
+defmodule LiveMediaComponent do
+  @derive Jason.Encoder
+  defstruct type: "audio",
+    track_id: 0,
+    sample_rate: 48000,
+    channel_count: 1,
+    format: "opus"
+end
+
 defmodule Entity do
   @enforce_keys [:id]
   @derive {Jason.Encoder, only: [:id, :components] }
@@ -36,7 +45,8 @@ defmodule Entity do
     components: %{
       transform: %TransformComponent{},
       relationships: %RelationshipsComponent{},
-      intent: %IntentComponent{}
+      intent: %IntentComponent{},
+      live_media: %LiveMediaComponent{}
     },
     owner: "" # client_id
 end

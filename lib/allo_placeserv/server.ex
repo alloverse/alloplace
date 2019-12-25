@@ -2,12 +2,15 @@ defmodule ServerState do
   defstruct clients: %{}, # from client_id to ClientRef
     mmallo: nil,
     push_state_timer: nil,
-    name: "Unnamed place"
+    name: "Unnamed place",
+    next_free_track: 1
 
   @type t :: %ServerState{
     clients: %{required(String.t()) => ClientRef.t()},
     mmallo: pid(),
-    push_state_timer: TRef
+    push_state_timer: TRef,
+    name: String.t(),
+    next_free_track: Integer.t()
   }
 end
 
@@ -87,7 +90,8 @@ defmodule ClientRef do
   defstruct id: nil,
     identity: %ClientIdentity{},
     avatar_id: nil,
-    intent: %ClientIntent{}
+    intent: %ClientIntent{},
+    audio_track_id: 0
   @type t :: %ClientRef{id: String.t(), avatar_id: String.t(), intent: ClientIntent.t()}
 end
 
@@ -158,6 +162,35 @@ defmodule Server do
   def handle_info({:lost_client, client_id}, state) do
     {:ok, state} = remove_client(client_id, state)
     {:noreply, state}
+  end
+
+  def handle_info({:client_media, from_client_id, media_packet}, state) do
+    from_client = state.clients[from_client_id]
+    track_id = from_client.audio_track_id
+    
+    # Check if we need to allocate a new track ID for this client
+    new_state = case from_client.audio_track_id do
+      0 -> 
+        track_id = state.next_free_track
+        Logger.info("Allocating media track #{track_id} to client #{from_client_id}")
+        # yeah we do. update both the avatar entity's component, and the cached clientref track id.
+        %ServerState{state|
+          clients: Map.update!(state.clients, from_client_id, fn(client) ->
+            :ok = PlaceStore.update_entity(AlloProcs.Store, client.avatar_id, :live_media, fn(m) ->
+              %{m| 
+                track_id: track_id
+              }
+            end)
+            %ClientRef{client|
+              audio_track_id: track_id
+            }
+          end),
+          next_free_track: track_id + 1
+        }
+      _ -> state
+    end
+
+    {:noreply, new_state}
   end
 
   ### Intents
