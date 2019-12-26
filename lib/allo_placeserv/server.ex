@@ -190,6 +190,20 @@ defmodule Server do
       _ -> state
     end
 
+    # message is track id as 32bit big endian integer, followed by the full packet
+    outgoing_payload = <<track_id::unsigned-big-integer-size(32)>> <> media_packet
+
+    state.clients |>
+      Enum.filter(fn({client_id, client}) -> client.id != from_client_id end) |>
+      Enum.each(fn({client_id, _client}) ->
+        MmAllonet.netsend(
+          state.mmallo,
+          client_id,
+          MmAllonet.channels.media,
+          outgoing_payload
+        )
+      end)
+
     {:noreply, new_state}
   end
 
