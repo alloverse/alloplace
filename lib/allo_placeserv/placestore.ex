@@ -13,7 +13,7 @@ defimpl Jason.Encoder, for: TransformComponent do
   def encode(struct, opts) do
     Jason.Encode.map(%{
       matrix: Tuple.to_list(
-        Graphmath.Mat44.multiply_transpose(Graphmath.Mat44.identity(), struct.matrix)
+        struct.matrix
       )
     }, opts)
   end

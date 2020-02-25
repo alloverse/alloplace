@@ -18,10 +18,10 @@ defmodule Pose do
   defstruct matrix: Graphmath.Mat44.identity()
 end
 defimpl Poison.Decoder, for: Pose do
-  # Convert matrix from list to Mat44, and transpose to convert from column-major (allonet protocol) to row-major (GraphMath)
+  # Convert matrix from list to Mat44
   def decode(value, _options) do
     %Pose{
-      matrix: Graphmath.Mat44.multiply_transpose(Graphmath.Mat44.identity(), List.to_tuple(value.matrix))
+      matrix: List.to_tuple(value.matrix)
     }
   end
 end
