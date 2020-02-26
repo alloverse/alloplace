@@ -229,23 +229,21 @@ defmodule Server do
         # move at 1m/s
         distance = delta * 1.0
 
-        # Intent movement is camera yaw-relative
-        movement = 
-          Graphmath.Mat44.multiply(
-            Graphmath.Mat44.make_translate(intent.xmovement * distance, 0, intent.zmovement * distance),
-            Graphmath.Mat44.make_rotate_y(intent.yaw)
-          )
-        
+        # Intent movement is camera yaw-relative.
+        # Combine the rotation and the translation into a "movement" transform
+        world_space_rotation = Graphmath.Mat44.make_rotate_y(intent.yaw)
+        model_space_translation = Graphmath.Mat44.make_translate(intent.xmovement * distance, 0, intent.zmovement * distance)
+        movement = model_space_translation
+          |> Graphmath.Mat44.multiply(world_space_rotation)
+
         # Discard everything in old matrix except position...
         {x, y, z} = Graphmath.Mat44.transform_point(t.matrix, Graphmath.Vec3.create())
-        # .. then add old position, intent movement, and replace rotation with intent rotation.
-        matrix = Graphmath.Mat44.multiply(
-          Graphmath.Mat44.multiply(
-            Graphmath.Mat44.make_translate(x, y, z),
-            movement
-          ),
-          Graphmath.Mat44.make_rotate_y(intent.yaw)
-        )
+        old_transform = Graphmath.Mat44.make_translate(x, y, z)
+
+        # .. then move and rotate the old transform by the intent.
+        matrix = movement
+          |> Graphmath.Mat44.multiply(old_transform)
+
         %TransformComponent{t|
           matrix: matrix
         }
