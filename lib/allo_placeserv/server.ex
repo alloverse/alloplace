@@ -144,7 +144,7 @@ defmodule Server do
 
     # ensure valid from (note: pattern match)
     if interaction.from_entity != "" do
-      {:ok, from_client_id} = PlaceStore.get_owner_id(AlloProcs.Store, interaction.from_entity)
+      {:ok, _} = PlaceStore.get_owner_id(AlloProcs.Store, interaction.from_entity)
     end
 
     # ensure announced
