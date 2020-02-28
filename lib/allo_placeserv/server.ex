@@ -90,8 +90,7 @@ defmodule ClientRef do
   defstruct id: nil,
     identity: %ClientIdentity{},
     avatar_id: nil,
-    intent: %ClientIntent{},
-    audio_track_id: 0
+    intent: %ClientIntent{}
   @type t :: %ClientRef{id: String.t(), avatar_id: String.t(), intent: ClientIntent.t()}
 end
 
@@ -164,37 +163,18 @@ defmodule Server do
     {:noreply, state}
   end
 
-  def handle_info({:client_media, from_client_id, media_packet}, state) do
-    from_client = state.clients[from_client_id]
-    track_id = from_client.audio_track_id
+  def handle_info({:client_media, from_client_id, incoming_payload}, state) do
+    # incoming message is track id as 32bit big endian integer, followed by media payload
+    #<<track_id :: unsigned-big-integer-size(32), media_packet>> = incoming_payload
     
-    # Check if we need to allocate a new track ID for this client
-    new_state = case from_client.audio_track_id do
-      0 -> 
-        track_id = state.next_free_track
-        Logger.info("Allocating media track #{track_id} to client #{from_client_id}")
-        # yeah we do. update both the avatar entity's component, and the cached clientref track id.
-        %ServerState{state|
-          clients: Map.update!(state.clients, from_client_id, fn(client) ->
-            :ok = PlaceStore.update_entity(AlloProcs.Store, client.avatar_id, :live_media, fn(m) ->
-              %{m| 
-                track_id: track_id
-              }
-            end)
-            %ClientRef{client|
-              audio_track_id: track_id
-            }
-          end),
-          next_free_track: track_id + 1
-        }
-      _ -> state
-    end
-
-    # message is track id as 32bit big endian integer, followed by the full packet
-    outgoing_payload = <<track_id::unsigned-big-integer-size(32)>> <> media_packet
+    # todo: lookup a LiveMediaComponent with a matching track ID and
+    # assert that from_client_id owns that entity.
+    
+    # outgoing payload is same format as outgoing, so we just mirror it out to all clients
+    outgoing_payload = incoming_payload
 
     state.clients |>
-      Enum.filter(fn({client_id, client}) -> client.id != from_client_id end) |>
+      Enum.filter(fn({_client_id, client}) -> client.id != from_client_id end) |>
       Enum.each(fn({client_id, _client}) ->
         MmAllonet.netsend(
           state.mmallo,
@@ -204,7 +184,7 @@ defmodule Server do
         )
       end)
 
-    {:noreply, new_state}
+    {:noreply, state}
   end
 
   ### Intents

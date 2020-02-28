@@ -46,9 +46,45 @@ defmodule PlaceEntity do
                 avatar_id: avatar.id,
                 identity: identity
             } end )
-        }
-    }
+        }}
     end
+
+    def handle_interaction(server_state,
+        client,
+        %Interaction{
+            :body => ["allocate_track", media_type, sample_rate, channel_count, media_format]
+        } = interaction
+    ) do
+        track_id = server_state.next_free_track
+        Logger.info("Allocating media track ##{track_id} to #{interaction.from_entity}")
+
+        media_comp = %LiveMediaComponent{
+            type: media_type,
+            track_id: track_id,
+            sample_rate: sample_rate,
+            channel_count: channel_count,
+            format: media_format
+        }
+
+        :ok = PlaceStore.update_entity(AlloProcs.Store,
+            interaction.from_entity,
+            %{ live_media: media_comp}
+        )
+
+        response = %Interaction {
+            from_entity: "place",
+            to_entity: interaction.from_entity,
+            request_id: interaction.request_id,
+            type: "response",
+            body: ["allocate_track", "ok", track_id]
+        }
+        Server.send_interaction(server_state, client.id, response)
+
+        {:ok, %ServerState{server_state|
+            next_free_track: track_id + 1,
+        }}
+    end
+
 
     def handle_interaction(server_state,
         _client,
