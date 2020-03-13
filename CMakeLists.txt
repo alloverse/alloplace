@@ -1,5 +1,10 @@
 cmake_minimum_required(VERSION 3.0)
-project(AllonetPort)
+project(AlloCBridge)
+
+set(CMAKE_BUILD_TYPE "Debug" CACHE STRING
+"Choose the type of build, options are: Debug Release
+RelWithDebInfo MinSizeRel."
+FORCE)
 
 add_subdirectory("src/allonet")
 
@@ -21,8 +26,13 @@ link_directories(
   ${Erlang_EI_LIBRARY_DIR}
 )
 
-file(GLOB SOURCES src/*.h src/*.c)
-add_executable(${PROJECT_NAME} ${SOURCES})
-target_link_libraries(${PROJECT_NAME} "erl_interface" "ei" "allonet")
+add_executable(
+  AlloNetPort src/erl_comm.c src/net.c
+)
+target_link_libraries(AlloNetPort "erl_interface" "ei" "allonet")
 
-message(${Erlang_EI_LIBRARIES})
+add_executable(
+  AlloStatePort src/erl_comm.c src/state.c
+)
+target_link_libraries(AlloStatePort "erl_interface" "ei" "allonet")
+

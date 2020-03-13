@@ -31,9 +31,9 @@ defmodule Poses do
   # can't use defstruct because some keys aren't regular atoms
   def __struct__() do
     %{
-      :__struct__ => __MODULE__, 
-      :head => %Pose{}, 
-      :"hand/left" => %Pose{}, 
+      :__struct__ => __MODULE__,
+      :head => %Pose{},
+      :"hand/left" => %Pose{},
       :"hand/right" => %Pose{}
     }
   end
@@ -43,12 +43,13 @@ defmodule Poses do
 end
 
 defmodule ClientIntent do
-  defstruct zmovement: 0,
+  defstruct entity_id: "",
+    zmovement: 0,
     xmovement: 0,
     yaw: 0,
     pitch: 0,
     poses: %Poses{}
-    @type t :: %ClientIntent{zmovement: float, xmovement: float, yaw: float, pitch: float, poses: Poses.t()}
+    @type t :: %ClientIntent{entity_id: String.t(), zmovement: float, xmovement: float, yaw: float, pitch: float, poses: Poses.t()}
 end
 
 defmodule Interaction do
@@ -108,10 +109,13 @@ defmodule Server do
     {:ok, mmallo} = MmAllonet.start_link([], self(), 31337)
 
     # update state and send world state @ 20hz
-    {:ok, tref} = :timer.send_interval(Kernel.trunc(1000/20), self(), {:timer, 1.0/20})
+    {:ok, tref} = :timer.send_interval(Kernel.trunc(1000/2), self(), {:timer, 1.0/2})
 
     reply = MmAllonet.ping(mmallo)
-    Logger.info("C replies? #{reply}")
+    Logger.info("net replies? #{reply}")
+
+    reply = PlaceStore.ping(AlloProcs.Store)
+    Logger.info("net replies? #{reply}")
 
     :ok = PlaceStore.add_entity(AlloProcs.Store, %PlaceEntity{})
 
@@ -166,10 +170,10 @@ defmodule Server do
   def handle_info({:client_media, from_client_id, incoming_payload}, state) do
     # incoming message is track id as 32bit big endian integer, followed by media payload
     #<<track_id :: unsigned-big-integer-size(32), media_packet>> = incoming_payload
-    
+
     # todo: lookup a LiveMediaComponent with a matching track ID and
     # assert that from_client_id owns that entity.
-    
+
     # outgoing payload is same format as outgoing, so we just mirror it out to all clients
     outgoing_payload = incoming_payload
 
@@ -192,67 +196,21 @@ defmodule Server do
   def handle_client_intent(client_id, intent, state) do
     {:noreply, %ServerState{state|
         clients: Map.update!(state.clients, client_id, fn(client) -> %ClientRef{client|
-          intent: intent
+          intent: %ClientIntent{intent|
+            entity_id: client.avatar_id
+          }
         } end )
       }
     }
   end
 
   def handle_timer(delta, state) do
-    # 1. Transform intents into forces
-    state.clients |> Enum.filter(fn {_, client} ->
-      client.avatar_id != nil
-    end) |> Enum.each(fn({_, client}) ->
-      # Go through each client intent and update the main avatar entity accordingly.
-      intent = client.intent
-      :ok = PlaceStore.update_entity(AlloProcs.Store, client.avatar_id, :transform, fn(t) ->
-        # move at 1m/s
-        distance = delta * 1.0
+    # 1. Simulate the world
+    intents = Enum.map(Map.values(state.clients), fn client -> client.intent end)
 
-        # Intent movement is camera yaw-relative.
-        # Combine the rotation and the translation into a "movement" transform
-        world_space_rotation = Graphmath.Mat44.make_rotate_y(intent.yaw)
-        model_space_translation = Graphmath.Mat44.make_translate(intent.xmovement * distance, 0, intent.zmovement * distance)
-        movement = model_space_translation
-          |> Graphmath.Mat44.multiply(world_space_rotation)
+    :ok = PlaceStore.simulate(AlloProcs.Store, delta, intents)
 
-        # Discard everything in old matrix except position...
-        {x, y, z} = Graphmath.Mat44.transform_point(t.matrix, Graphmath.Vec3.create())
-        old_transform = Graphmath.Mat44.make_translate(x, y, z)
-
-        # .. then move and rotate the old transform by the intent.
-        matrix = movement
-          |> Graphmath.Mat44.multiply(old_transform)
-
-        %TransformComponent{t|
-          matrix: matrix
-        }
-      end)
-
-      # Go through each client intent pose and find matching entities if any, and override their transforms.
-      intent.poses
-        |> Map.from_struct()
-        |> Enum.filter(fn {_poseName, pose} -> !is_nil(pose) end)
-        |> Enum.each(fn {poseName, pose} ->
-          poseNameStr = Atom.to_string(poseName)
-          case PlaceStore.find_entity(AlloProcs.Store, fn {_id, e}  ->
-            e.owner == client.id && Map.get(e.components, :intent, %IntentComponent{}).actuate_pose == poseNameStr
-          end) do
-          {:error, :notfound} -> nil
-          {:ok, entity} ->
-            :ok = PlaceStore.update_entity(AlloProcs.Store, entity.id, :transform, fn(_) ->
-              %TransformComponent{
-                matrix: pose.matrix
-              }
-            end)
-          end
-        end)
-    end)
-
-    # 2. Transform forces into position and rotation changes
-    # ...todo, and make intents modify physprops, not transform
-
-    # 3. Broadcast new states
+    # 2. Broadcast new states
     {:ok, snapshot} = PlaceStore.get_snapshot(AlloProcs.Store)
     send_snapshot(state, snapshot)
     {:noreply, state}

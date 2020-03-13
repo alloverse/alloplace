@@ -10,7 +10,7 @@ defmodule AlloPlaceserv.Application do
   def start(_type, _args) do
     children = [
       {Task.Supervisor, name: AlloProcs.TaskSupervisor},
-      {PlaceStore, name: AlloProcs.Store},
+      {PlaceDaemon, name: AlloProcs.Store},
       {Server, name: AlloProcs.Serv},
     ]
 

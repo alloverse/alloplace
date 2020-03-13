@@ -1,9 +1,7 @@
 defmodule AllonetState do
   defstruct udpport: 31337,
     delegate: nil, # pid()
-    port: nil, # port()
-    next_request_id: 1, # int()
-    outstanding_requests: %{} # int() -> pid()
+    daemon: nil # DaemonState
 end
 
 
@@ -24,16 +22,8 @@ defmodule MmAllonet do
   end
 
   def init(initial_state) do
-    Process.flag(:trap_exit, true)
-    port = Port.open({:spawn, "priv/AllonetPort"}, [
-      {:packet, 2},
-      :binary,
-      :nouse_stdio
-    ])
-    Process.link port
-
     {:ok, %AllonetState{initial_state|
-      port: port
+      daemon: Daemon.setup("priv/AlloNetPort")
     }}
   end
 
@@ -67,25 +57,16 @@ defmodule MmAllonet do
   end
 
   def handle_call({:ccall, cmd, args}, from, state) do
-    rid = state.next_request_id
-    msg = {cmd, rid, args}
-    send(state.port, {self(), {:command, :erlang.term_to_binary(msg)}})
+    {:ok, daemon} = Daemon.call_to_c(cmd, args, from, state.daemon)
     { :noreply,
       %AllonetState{state|
-        next_request_id: rid+1,
-        outstanding_requests: Map.put(state.outstanding_requests, rid, from)
+        daemon: daemon,
       }
     }
   end
 
   def handle_call(:stop, _from, state) do
-    send(state.port, {self(), :close})
-    :ok = receive do
-      {_port, :closed} ->
-        :ok
-      after 1_000 ->
-        :timeout
-    end
+    :ok = Daemon.stop(state.daemon)
     { :reply,
       :ok,
       %AllonetState{state|
@@ -95,31 +76,24 @@ defmodule MmAllonet do
   end
 
   def handle_info({_from, {:data, data}}, state) do
-    case :erlang.binary_to_term(data) do
-      {:response, request_id, payload} ->
-        {pid, oustanding} = Map.pop(state.outstanding_requests, request_id)
-        GenServer.reply(pid, payload)
-        {
-          :noreply,
-          %AllonetState{state|
-            outstanding_requests: oustanding
-          }
-        }
+    {payload, dstate} = Daemon.handle_call_from_c(data, state.daemon)
+
+    case payload do
       {:client_connected, client_id} ->
         send(state.delegate, {:new_client, client_id})
-        {
-          :noreply,
-          state
-        }
       {:client_disconnected, client_id} ->
         send(state.delegate, {:lost_client, client_id})
-        {
-          :noreply,
-          state
-        }
       {:client_sent, client_id, channel, payload} ->
         parse_payload(client_id, channel, payload, state)
+      :ok -> :ok
     end
+
+    {
+      :noreply,
+      %AllonetState{state|
+        daemon: dstate
+      }
+    }
   end
 
   # why is :EXIT callled but not this?

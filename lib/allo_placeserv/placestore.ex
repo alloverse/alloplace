@@ -85,22 +85,21 @@ defmodule PlaceStore do
   def update_entity(server, entity_id, components) do
     GenServer.call(server, {:update_entity, entity_id, components})
   end
-  @doc """
-    Update a specific entity by executing given fun on a named component,
-    mapping its contents to new values
-  """
-  def update_entity(server, entity_id, component_name, fun) do
-    GenServer.call(server, {:update_entity, entity_id, component_name, fun})
-  end
-  def find_entity(server, fun) do
-    GenServer.call(server, {:find_entity, fun})
-  end
+
   def get_snapshot(server) do
     GenServer.call(server, {:get_snapshot})
   end
 
   def get_owner_id(server, entity_id) do
     GenServer.call(server, {:get_owner_id, entity_id})
+  end
+
+  def simulate(server, dt, intents) do
+    GenServer.call(server, {:simulate, dt, intents})
+  end
+
+  def ping(this) do
+    GenServer.call(this, {:ping, {}})
   end
 
   ## Server callbacks
@@ -182,6 +181,15 @@ defmodule PlaceStore do
       {:ok,
         state.entities[entity_id].owner
       },
+      state
+    }
+  end
+
+  def handle_call({:simulate, dt, intents}, _from, state) do
+
+
+    {:reply,
+      :ok,
       state
     }
   end

@@ -24,9 +24,6 @@ void write_term(ETERM *term)
     write_cmd(outbuf, erl_term_len(term));
 }
 
-int foo(int a) { return a*2; }
-int bar(int a) { return a*3; }
-
 alloserver *serv;
 
 void handle_allo()
@@ -92,7 +89,7 @@ void handle_erl()
         write_term(msg);
         return;
     } else if(strcmp(ERL_ATOM_PTR(command), "ping") == 0) {
-        scoped_comp ETERM *msg = erl_format("{response, ~w, pong}", reqId);
+        scoped_comp ETERM *msg = erl_format("{response, ~w, netpong}", reqId);
         write_term(msg);
         return;
     }
