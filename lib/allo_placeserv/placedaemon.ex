@@ -21,7 +21,6 @@ defmodule PlaceDaemon do
   def handle_call(ccall, from, state) do
     cmd = elem(ccall, 0)
     args = Tuple.delete_at(ccall, 0)
-    Logger.info("Sending to state daemon cmd #{inspect(cmd)} args #{inspect(args)}")
     {:ok, dstate} = Daemon.call_to_c(cmd, args, from, state)
     { :noreply,
       dstate

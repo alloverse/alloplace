@@ -25,7 +25,6 @@ defmodule Daemon do
     rid = state.next_request_id
     msg = {cmd, rid, args}
     binmsg = :erlang.term_to_binary(msg)
-    Logger.info("Sending message #{cmd} as #{byte_size(binmsg)} bytes of data: #{inspect(binmsg)}")
     send(state.port, {self(), {:command, binmsg}})
     { :ok,
       %DaemonState{state|

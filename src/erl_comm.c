@@ -18,7 +18,6 @@ uint8_t* read_cmd()
         if (read(erlin, lenbuf, 2) != 2)
             assert(0);
         g_target_length = (lenbuf[0] << 8) | lenbuf[1];
-        printf("%d Reading command of length %d\n", getpid(), g_target_length);
         g_buf = malloc(g_target_length);
     }
     return read_inner();
