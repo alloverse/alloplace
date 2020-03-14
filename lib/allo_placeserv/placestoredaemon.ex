@@ -1,4 +1,4 @@
-defmodule PlaceDaemon do
+defmodule PlaceStoreDaemon do
   use GenServer
   require Logger
 
