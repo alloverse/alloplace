@@ -32,14 +32,16 @@ void handle_erl()
     
     char command[MAXATOMLEN];
     long reqId;
+    int argsLen;
     assert(ei_decode_atom(request, &request_index, command) == 0);
     assert(ei_decode_long(request, &request_index, &reqId) == 0);
+    assert(ei_decode_tuple_header(request, &request_index, &argsLen) == 0);
     
     scopedx ei_x_buff response; ei_x_new_with_version(&response);
     if(strcmp(command, "ping") == 0) {
         ei_x_format_wo_ver(&response, "{response, ~l, statepong}", reqId);
     } else if(strcmp(command, "add_entity") == 0) {
-        cJSON *json = ei_decode_as_cjson(request, &request_index);
+        cJSON *json = ei_decode_cjson_string(request, &request_index);
         add_entity(json, response);
     } else {
         printf("statedaemon: Unknown command %s\n", command);

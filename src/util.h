@@ -11,20 +11,9 @@ static void free_x(ei_x_buff *handle) { ei_x_free(handle); }
 static void free_j(cJSON **handle) { cJSON_Delete(*handle); }
 #define scopedj __attribute__ ((__cleanup__(free_j)))
 
-#define get8(s, index) \
-     ((s) += 1, *index += 1, \
-      ((unsigned char *)(s))[-1] & 0xff)
-#define get16be(s, index) \
-     ((s) += 2, *index += 2, \
-      (((((unsigned char *)(s))[-2] << 8) | \
-	((unsigned char *)(s))[-1])) & 0xffff) 
-#define get32be(s, index) \
-     ((s) += 4, *index += 4, \
-      ((((unsigned char *)(s))[-4] << 24) | \
-       (((unsigned char *)(s))[-3] << 16) | \
-       (((unsigned char *)(s))[-2] << 8) | \
-       ((unsigned char *)(s))[-1]))
-
-extern cJSON *ei_decode_as_cjson(const char *buf, int *index);
+// Decodes a utf8 binary at index and parses it as json
+extern cJSON *ei_decode_cjson_string(const char *buf, int *index);
+// Decodes arbitrary erlang terms at index into roughly equivalent json. BROKEN
+extern cJSON *ei_decode_to_cjson(const char *buf, int *index);
 
 #endif

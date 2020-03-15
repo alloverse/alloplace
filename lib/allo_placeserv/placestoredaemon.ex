@@ -2,6 +2,8 @@ defmodule PlaceStoreDaemon do
   use GenServer
   require Logger
 
+  ### Public API
+
   def start_link(opts) do
     GenServer.start_link(__MODULE__, {}, opts)
   end
@@ -9,6 +11,10 @@ defmodule PlaceStoreDaemon do
   def init(_) do
     {:ok, Daemon.setup("priv/AlloStatePort")}
   end
+
+  # ... + the public methods in PlaceStore.ex
+
+  ### Internals
 
   def handle_call(:stop, _from, state) do
     :ok = Daemon.stop(state)
@@ -20,7 +26,12 @@ defmodule PlaceStoreDaemon do
 
   def handle_call(ccall, from, state) do
     cmd = elem(ccall, 0)
-    args = Tuple.delete_at(ccall, 0)
+    args = case ccall do
+      {:add_entity, entity} -> with {:ok, json} <- Jason.encode(entity), do: {json}
+      {:update_entity, eid, comps} -> with {:ok, json} <- Jason.encode(comps), do: {eid, json}
+      {:simulate, dt, intents} -> with {:ok, json} <- Jason.encode(intents), do: {dt, json}
+      _ -> Tuple.delete_at(ccall, 0)
+    end
     {:ok, dstate} = Daemon.call_to_c(cmd, args, from, state)
     { :noreply,
       dstate

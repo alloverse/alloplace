@@ -1,6 +1,38 @@
 #include "util.h"
 #include <assert.h>
 
+cJSON *ei_decode_cjson_string(const char *buf, int *index)
+{
+    int type, size;
+    assert(ei_get_type(buf, index, &type, &size) == 0);
+    assert(type == ERL_BINARY_EXT);
+    char s[size+1];
+    long actualLength;
+    assert(ei_decode_binary(buf, index, s, &actualLength) == 0);
+    assert(actualLength == size);
+    s[actualLength] = '\0';
+    cJSON *json = cJSON_Parse(s);
+    assert(json != NULL);
+    return json;
+}
+
+#define get8(s, index) \
+     ((s) += 1, *index += 1, \
+      ((unsigned char *)(s))[-1] & 0xff)
+#define get16be(s, index) \
+     ((s) += 2, *index += 2, \
+      (((((unsigned char *)(s))[-2] << 8) | \
+	((unsigned char *)(s))[-1])) & 0xffff) 
+#define get32be(s, index) \
+     ((s) += 4, *index += 4, \
+      ((((unsigned char *)(s))[-4] << 24) | \
+       (((unsigned char *)(s))[-3] << 16) | \
+       (((unsigned char *)(s))[-2] << 8) | \
+       ((unsigned char *)(s))[-1]))
+
+
+/// NOTE: This is broken, not sure how. Giving up on it for now but keeping it because
+/// I feel like it will become very useful in the future (as a reference, if nothing else)
 cJSON *ei_decode_as_cjson(const char *buf, int *index)
 {
     const char* s = buf + *index;
@@ -28,6 +60,7 @@ cJSON *ei_decode_as_cjson(const char *buf, int *index)
     case ERL_ATOM_UTF8_EXT:
     case ERL_SMALL_ATOM_EXT:
     case ERL_SMALL_ATOM_UTF8_EXT: {
+        printf("About to decode atom. Type is %d, length is %d+%d. at %d\n", c, s[0], s[1], *index);
         char command[MAXATOMLEN];
 	    assert(ei_decode_atom(buf, index, command) == 0);
         ret = cJSON_CreateString(command); 
