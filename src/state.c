@@ -11,9 +11,16 @@
 ////////// STATE MANAGEMENT AND HANDLER FUNCTIONS
 
 allo_state state;
-static void add_entity(cJSON *json, ei_x_buff response)
+static void add_entity(cJSON *json, ei_x_buff *response)
 {
-    printf("It'd be great to add this entity now: %s\n", cJSON_Print(json));
+    const char *entity_id = cJSON_GetObjectItem(json, "id")->valuestring;
+    printf("Adding entity %s\n", entity_id);
+    allo_entity *ent = entity_create(entity_id);
+    cJSON *components = cJSON_DetachItemFromObject(json, "components");
+    ent->components = components;
+    LIST_INSERT_HEAD(&state.entities, ent, pointers);
+
+    ei_x_encode_atom(response, "ok");
 }
 
 ///////// COMMS MANAGEMENT
@@ -42,7 +49,7 @@ void handle_erl()
         ei_x_format_wo_ver(&response, "{response, ~l, statepong}", reqId);
     } else if(strcmp(command, "add_entity") == 0) {
         cJSON *json = ei_decode_cjson_string(request, &request_index);
-        add_entity(json, response);
+        add_entity(json, &response);
     } else {
         printf("statedaemon: Unknown command %s\n", command);
         ei_x_format_wo_ver(&response, "{response, ~l, {error, \"no such command\"}}", reqId);
