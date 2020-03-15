@@ -1,103 +1,12 @@
 #include <string.h>
-#include <ei.h>
-#include <allonet/allonet.h>
-#include <allonet/../../lib/cJSON/cJSON.h>
-#include "erl_comm.h"
 #include <enet/enet.h>
 #include <sys/fcntl.h>
 #include <assert.h>
 
-///////// UTILS
+#include <allonet/allonet.h>
+#include "erl_comm.h"
+#include "util.h"
 
-void free_handle(uint8_t **handle) { free(*handle); }
-#define scoped __attribute__ ((__cleanup__(free_handle)))
-void free_x(ei_x_buff *handle) { ei_x_free(handle); }
-#define scopedx __attribute__ ((__cleanup__(free_x)))
-void free_j(cJSON **handle) { cJSON_Delete(*handle); }
-#define scopedj __attribute__ ((__cleanup__(free_j)))
-
-#define get8(s, index) \
-     ((s) += 1, *index += 1, \
-      ((unsigned char *)(s))[-1] & 0xff)
-#define get16be(s, index) \
-     ((s) += 2, *index += 2, \
-      (((((unsigned char *)(s))[-2] << 8) | \
-	((unsigned char *)(s))[-1])) & 0xffff) 
-#define get32be(s, index) \
-     ((s) += 4, *index += 4, \
-      ((((unsigned char *)(s))[-4] << 24) | \
-       (((unsigned char *)(s))[-3] << 16) | \
-       (((unsigned char *)(s))[-2] << 8) | \
-       ((unsigned char *)(s))[-1]))
-
-cJSON *ei_decode_as_cjson(uint8_t *buf, int *index)
-{
-    const char* s = buf + *index;
-    int arity;
-    double vf;
-    char c = get8(s, index);
-    cJSON *ret = NULL;
-
-    switch (c) {
-    case ERL_SMALL_INTEGER_EXT:
-        ret = cJSON_CreateNumber(get8(s, index));
-        break;
-    case ERL_INTEGER_EXT:
-        ret = cJSON_CreateNumber(get32be(s, index));
-        break;
-    case ERL_FLOAT_EXT:
-    case NEW_FLOAT_EXT:
-        assert(ei_decode_double(buf, index, &vf) == 0);
-        ret = cJSON_CreateNumber(vf);
-        break;
-    case ERL_ATOM_EXT:
-    case ERL_ATOM_UTF8_EXT:
-    case ERL_SMALL_ATOM_EXT:
-    case ERL_SMALL_ATOM_UTF8_EXT: {
-        char command[MAXATOMLEN];
-	    assert(ei_decode_atom(buf, index, command) == 0);
-        ret= cJSON_CreateString(command); 
-        break; }
-    case ERL_SMALL_TUPLE_EXT:
-    case ERL_LARGE_TUPLE_EXT:
-        arity = (c == ERL_SMALL_TUPLE_EXT) ? get8(s, index) : get32be(s, index);
-        ret = cJSON_CreateArray();
-        for(int i = 0; i < arity; i++) {
-            cJSON *child = ei_decode_as_cjson(buf, index);
-            cJSON_AddItemToArray(ret, child);
-        }
-        break;
-    case ERL_NIL_EXT:
-        ret = cJSON_CreateNull();
-        break;
-    case ERL_STRING_EXT: {
-	    arity = get16be(s, index);
-        char s[arity];
-        assert(ei_decode_string(buf, index, s) == 0);
-        ret = cJSON_CreateString(s); 
-        break; }
-    case ERL_LIST_EXT:
-        arity = get32be(s, index);
-        ret = cJSON_CreateArray();
-        for(int i = 0; i < arity; i++) {
-            cJSON *child = ei_decode_as_cjson(buf, index);
-            cJSON_AddItemToArray(ret, child);
-        }
-        break;
-    case ERL_MAP_EXT:
-        arity = get32be(s, index);
-        ret = cJSON_CreateObject();
-        for(int i = 0; i < arity; i++) {
-            cJSON *key = ei_decode_as_cjson(buf, index);
-            assert(cJSON_IsString(key));
-            cJSON *value = ei_decode_as_cjson(buf, index);
-            cJSON_AddItemToObject(ret, key->valuestring, value);
-        }
-        break;
-    }
-    assert(ret != NULL && "unsupported type");
-    return ret;
-}
 
 ////////// STATE MANAGEMENT AND HANDLER FUNCTIONS
 
@@ -108,10 +17,10 @@ static void add_entity(cJSON *json, ei_x_buff response)
 }
 
 ///////// COMMS MANAGEMENT
-
+ 
 void handle_erl()
 {
-    scoped uint8_t *request = read_cmd();
+    scoped char *request = (char*)read_cmd();
     int request_index = 0;
     if(!request)
         return;
@@ -141,7 +50,7 @@ void handle_erl()
         ei_x_format_wo_ver(&response, "{response, ~l, {error, \"missing response\"}}", reqId);        
     }
 
-    write_cmd(response.buff, response.index);
+    write_cmd((uint8_t*)response.buff, response.index);
 }
 
 int main()

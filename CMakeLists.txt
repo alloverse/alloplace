@@ -32,7 +32,7 @@ add_executable(
 target_link_libraries(AlloNetPort "erl_interface" "ei" "allonet")
 
 add_executable(
-  AlloStatePort src/erl_comm.c src/state.c
+  AlloStatePort src/erl_comm.c src/state.c src/util.c
 )
 target_link_libraries(AlloStatePort "erl_interface" "ei" "allonet")
 
