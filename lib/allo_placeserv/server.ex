@@ -116,7 +116,7 @@ defmodule Server do
     {:ok, mmallo} = MmAllonet.start_link([], self(), 31337)
 
     # update state and send world state @ 20hz
-    {:ok, tref} = :timer.send_interval(Kernel.trunc(1000/2), self(), {:timer, 1.0/2})
+    {:ok, tref} = :timer.send_interval(Kernel.trunc(1000/20), self(), {:timer, 1.0/20.0})
 
     reply = MmAllonet.ping(mmallo)
     Logger.info("net replies? #{reply}")
