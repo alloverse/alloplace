@@ -25,6 +25,13 @@ defimpl Poison.Decoder, for: Pose do
     }
   end
 end
+defimpl Poison.Encoder, for: Pose do
+  def encode(value, options) do
+    Poison.Encoder.encode(%{
+      matrix: Tuple.to_list(value.matrix)
+    }, options)
+  end
+end
 
 
 defmodule Poses do
