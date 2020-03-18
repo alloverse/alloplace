@@ -40,7 +40,7 @@ end
 
 defmodule Entity do
   @enforce_keys [:id]
-  @derive {Jason.Encoder, only: [:id, :components] }
+  @derive {Jason.Encoder, only: [:id, :components, :owner] }
   defstruct id: "",
     components: %{
       transform: %TransformComponent{},

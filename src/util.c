@@ -1,6 +1,18 @@
 #include "util.h"
 #include <assert.h>
 
+extern char *ei_decode_elixir_string(const char *buf, int *index)
+{
+    int type, size;
+    assert(ei_get_type(buf, index, &type, &size) == 0);
+    assert(type == ERL_BINARY_EXT);
+    char *s = calloc(1, size+1);
+    long actualLength;
+    assert(ei_decode_binary(buf, index, s, &actualLength) == 0);
+    assert(actualLength == size);
+    return s;
+}
+
 cJSON *ei_decode_cjson_string(const char *buf, int *index)
 {
     int type, size;

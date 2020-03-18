@@ -12,11 +12,15 @@
 ////////// STATE MANAGEMENT AND HANDLER FUNCTIONS
 
 allo_state state;
+
 static void add_entity(long reqId, cJSON *json, ei_x_buff *response)
 {
     const char *entity_id = cJSON_GetObjectItem(json, "id")->valuestring;
-    printf("Adding entity %s\n", entity_id);
+    const char *owner_id = cJSON_GetObjectItem(json, "owner")->valuestring;
+    printf("Adding entity %s for %s\n", entity_id, owner_id);
     allo_entity *ent = entity_create(entity_id);
+
+    ent->owner_agent_id = strdup(owner_id);
     cJSON *components = cJSON_DetachItemFromObject(json, "components");
     ent->components = components;
     LIST_INSERT_HEAD(&state.entities, ent, pointers);
@@ -80,6 +84,19 @@ static void get_snapshot(long reqId, ei_x_buff *response)
     cJSON_Delete(jresponse);
 }
 
+static void get_owner_id(long reqId, const char *entity_id, ei_x_buff *response)
+{
+    allo_entity *entity = state_get_entity(&state, entity_id);
+    if (!entity)
+    {
+        ei_x_format_wo_ver(response, "{response, ~l, {error, no_such_entity}}", reqId);
+        return;
+    }
+
+    assert(entity->owner_agent_id);
+    ei_x_format_wo_ver(response, "{response, ~l, {ok, ~s}}", reqId, entity->owner_agent_id);
+}
+
 
 ///////// COMMS MANAGEMENT
  
@@ -115,6 +132,11 @@ void handle_erl()
         simulate(reqId, dt, json, &response);
     } else if(strcmp(command, "get_snapshot") == 0) {
         get_snapshot(reqId, &response);
+    } else if(strcmp(command, "get_owner_id") == 0) {
+        assert(argsLen == 1);
+        char *owner_id = ei_decode_elixir_string(request, &request_index);
+        get_owner_id(reqId, owner_id, &response);
+        free(owner_id);
     } else {
         printf("statedaemon: Unknown command %s\n", command);
         ei_x_format_wo_ver(&response, "{response, ~l, {error, \"no such command\"}}", reqId);

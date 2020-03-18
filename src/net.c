@@ -4,6 +4,7 @@
 #include "erl_comm.h"
 #include <enet/enet.h>
 #include <sys/fcntl.h>
+#include <assert.h>
 
  #define MAX(a,b) \
    ({ __typeof__ (a) _a = (a); \
@@ -43,12 +44,15 @@ void handle_erl()
     scoped_comp ETERM *args = erl_element(3, tuplep);
     
     if (strcmp(ERL_ATOM_PTR(command), "disconnect") == 0) {
-        scoped_term ETERM* e_client_ptr = erl_element(1, args);
-        void *client_ptr = (void*)ERL_LL_UVALUE(e_client_ptr);
+        scoped_term ETERM* e_client_id = erl_element(1, args);
+        char agent_id[AGENT_ID_LENGTH+1] = {0};
+        assert(ERL_BIN_SIZE(e_client_id) == AGENT_ID_LENGTH);
+        memcpy(agent_id, ERL_BIN_PTR(e_client_id), ERL_BIN_SIZE(e_client_id));
+
         alloserver_client *client;
         LIST_FOREACH(client, &serv->clients, pointers)
         {
-            if(client == client_ptr) {
+            if(strcmp(client->agent_id, agent_id) == 0) {
                 serv->disconnect(serv, client);
                 scoped_comp ETERM *msg = erl_format("{response, ~w, ok}", reqId);
                 write_term(msg);
@@ -64,15 +68,19 @@ void handle_erl()
         write_term(msg);
         return;
     } else if (strcmp(ERL_ATOM_PTR(command), "send") == 0) {
-        scoped_term ETERM* payload = erl_element(3, args);
+        scoped_term ETERM* e_client_id = erl_element(1, args);
+        char agent_id[AGENT_ID_LENGTH+1] = {0};
+        assert(ERL_BIN_SIZE(e_client_id) == AGENT_ID_LENGTH);
+        memcpy(agent_id, ERL_BIN_PTR(e_client_id), ERL_BIN_SIZE(e_client_id));
         scoped_term ETERM* channel = erl_element(2, args);
-        scoped_term ETERM* e_client_ptr = erl_element(1, args);
-        void *client_ptr = (void*)ERL_LL_UVALUE(e_client_ptr);
+        scoped_term ETERM* payload = erl_element(3, args);
+
+
         alloserver_client *client;
+
         LIST_FOREACH(client, &serv->clients, pointers)
         {
-            
-            if(client == client_ptr) {
+            if(strcmp(client->agent_id, agent_id) == 0) {
                 serv->send(
                     serv,
                     client,
@@ -102,10 +110,11 @@ void handle_erl()
 void clients_changed(alloserver *serv, alloserver_client *added, alloserver_client *removed)
 {
     if(added) {
-        scoped_comp ETERM *msg = erl_format("{client_connected, ~w}", erl_mk_ulonglong((unsigned long long)added));
+        scoped_comp ETERM *msg = erl_format("{client_connected, ~w}", erl_mk_binary(added->agent_id, AGENT_ID_LENGTH));
         write_term(msg);
     } else {
-        scoped_comp ETERM *msg = erl_format("{client_disconnected, ~w}", erl_mk_ulonglong((unsigned long long)removed));
+        ETERM *aid = erl_mk_binary(added->agent_id, AGENT_ID_LENGTH);
+        scoped_comp ETERM *msg = erl_format("{client_disconnected, ~w}", erl_mk_binary(removed->agent_id, AGENT_ID_LENGTH));
         write_term(msg);
     }
 }
@@ -114,7 +123,7 @@ void client_sent(alloserver *serv, alloserver_client *client, allochannel channe
 {
     scoped_comp ETERM *msg = erl_format(
         "{client_sent, ~w, ~i, ~w}",
-        erl_mk_ulonglong((unsigned long long)client),
+        erl_mk_binary(client->agent_id, AGENT_ID_LENGTH),
         channel,
         erl_mk_binary((const char*)data, data_length)
     );

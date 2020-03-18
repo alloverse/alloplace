@@ -115,7 +115,7 @@ defmodule Server do
     Logger.info("net replies? #{reply}")
 
     reply = PlaceStore.ping(AlloProcs.Store)
-    Logger.info("net replies? #{reply}")
+    Logger.info("state replies? #{reply}")
 
     :ok = PlaceStore.add_entity(AlloProcs.Store, %PlaceEntity{})
 

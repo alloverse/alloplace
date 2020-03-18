@@ -20,7 +20,7 @@ defmodule PlaceEntity do
             :body => ["announce", "version", 1, "identity", identity, "spawn_avatar", avatardesc]
         } = interaction
     ) do
-        Logger.info("Client announce: #{inspect(interaction)}")
+        Logger.info("Client announce for client #{client.id}: #{inspect(interaction)}")
 
         avatars = entities_for_desc(avatardesc, client.id, %RelationshipsComponent{})
         true = Enum.all?(

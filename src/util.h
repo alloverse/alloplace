@@ -16,4 +16,7 @@ extern cJSON *ei_decode_cjson_string(const char *buf, int *index);
 // Decodes arbitrary erlang terms at index into roughly equivalent json. BROKEN
 extern cJSON *ei_decode_to_cjson(const char *buf, int *index);
 
+extern char *ei_decode_elixir_string(const char *buf, int *index);
+
+
 #endif
