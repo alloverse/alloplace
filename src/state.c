@@ -6,6 +6,7 @@
 #include <allonet/allonet.h>
 #include "erl_comm.h"
 #include "util.h"
+#include "allonet/src/util.h"
 
 
 ////////// STATE MANAGEMENT AND HANDLER FUNCTIONS
@@ -22,6 +23,63 @@ static void add_entity(long reqId, cJSON *json, ei_x_buff *response)
 
     ei_x_format_wo_ver(response, "{response, ~l, ok}", reqId);
 }
+
+static void simulate(long reqId, double dt, cJSON *jintents, ei_x_buff *response)
+{
+    int intent_count = cJSON_GetArraySize(jintents);
+    allo_client_intent intents[intent_count];
+    for(int i = 0; i < intent_count; i++)
+    {
+        cJSON *jintent = cJSON_GetArrayItem(jintents, i);
+        intents[i].entity_id = cJSON_GetObjectItem(jintent, "entity_id")->valuestring;
+        intents[i].zmovement = cJSON_GetObjectItem(jintent, "zmovement")->valuedouble;
+        intents[i].xmovement = cJSON_GetObjectItem(jintent, "xmovement")->valuedouble;
+        intents[i].yaw = cJSON_GetObjectItem(jintent, "yaw")->valuedouble;
+        intents[i].pitch = cJSON_GetObjectItem(jintent, "pitch")->valuedouble;
+
+        cJSON *poses = cJSON_GetObjectItem(jintent, "poses");
+        intents[i].poses.head.matrix = cjson2m(cJSON_GetObjectItem(cJSON_GetObjectItem(poses, "head"), "matrix"));
+        intents[i].poses.left_hand.matrix = cjson2m(cJSON_GetObjectItem(cJSON_GetObjectItem(poses, "hand/left"), "matrix"));
+        intents[i].poses.right_hand.matrix = cjson2m(cJSON_GetObjectItem(cJSON_GetObjectItem(poses, "hand/right"), "matrix"));
+    }
+    allo_simulate(&state, dt, intents, intent_count);
+
+    ei_x_format_wo_ver(response, "{response, ~l, ok}", reqId);
+}
+
+static void get_snapshot(long reqId, ei_x_buff *response)
+{
+    state.revision++;
+    
+    cJSON *jentities = cJSON_CreateObject();
+    allo_entity *entity = NULL;
+    LIST_FOREACH(entity, &state.entities, pointers)
+    {
+        cJSON *jentity = cjson_create_object("id", cJSON_CreateString(entity->id), NULL);
+        cJSON_AddItemReferenceToObject(jentity, "components", entity->components);
+        cJSON_AddItemToObject(jentities, entity->id, jentity);
+    }
+
+    cJSON *jresponse = cjson_create_object(
+        "revision", cJSON_CreateNumber(state.revision),
+        "entities", jentities,
+        NULL
+    );
+    char *jsons = cJSON_PrintUnformatted(jresponse);
+    
+    // Respond with  {response, ResponseId, {ok, JSON}} where JSON is a binary, which is not something
+    // we can express with ei_x_format.
+    ei_x_encode_tuple_header(response, 3);
+    ei_x_encode_atom(response, "response");
+    ei_x_encode_long(response, reqId);
+    ei_x_encode_tuple_header(response, 2);
+    ei_x_encode_atom(response, "ok");
+    ei_x_encode_binary(response, jsons, strlen(jsons));
+
+    free(jsons);
+    cJSON_Delete(jresponse);
+}
+
 
 ///////// COMMS MANAGEMENT
  
@@ -50,6 +108,13 @@ void handle_erl()
     } else if(strcmp(command, "add_entity") == 0) {
         cJSON *json = ei_decode_cjson_string(request, &request_index);
         add_entity(reqId, json, &response);
+    } else if(strcmp(command, "simulate") == 0) {
+        double dt;
+        assert(ei_decode_double(request, &request_index, &dt) == 0);
+        cJSON *json = ei_decode_cjson_string(request, &request_index);
+        simulate(reqId, dt, json, &response);
+    } else if(strcmp(command, "get_snapshot") == 0) {
+        get_snapshot(reqId, &response);
     } else {
         printf("statedaemon: Unknown command %s\n", command);
         ei_x_format_wo_ver(&response, "{response, ~l, {error, \"no such command\"}}", reqId);

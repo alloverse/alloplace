@@ -217,9 +217,7 @@ defmodule Server do
   end
 
   defp send_snapshot(state, snapshot) do
-    {:ok, json} = Jason.encode(snapshot)
-    #Logger.info("World: #{inspect(snapshot)}")
-    payload = json <> "\n"
+    payload = snapshot <> "\n"
     Enum.each(state.clients, fn({client_id, _client}) ->
       MmAllonet.netsend(
         state.mmallo,
