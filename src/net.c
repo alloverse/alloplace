@@ -113,7 +113,7 @@ void clients_changed(alloserver *serv, alloserver_client *added, alloserver_clie
         scoped_comp ETERM *msg = erl_format("{client_connected, ~w}", erl_mk_binary(added->agent_id, AGENT_ID_LENGTH));
         write_term(msg);
     } else {
-        ETERM *aid = erl_mk_binary(added->agent_id, AGENT_ID_LENGTH);
+        ETERM *aid = erl_mk_binary(removed->agent_id, AGENT_ID_LENGTH);
         scoped_comp ETERM *msg = erl_format("{client_disconnected, ~w}", erl_mk_binary(removed->agent_id, AGENT_ID_LENGTH));
         write_term(msg);
     }

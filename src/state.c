@@ -39,6 +39,37 @@ static void update_entity(long reqId, const char *entity_id, cJSON *comps, ei_x_
     ei_x_format_wo_ver(response, "{response, ~l, ok}", reqId);
 }
 
+static void remove_entity_by_id(const char *entity_id)
+{
+    allo_entity *entity = state.entities.lh_first;
+    while(entity)
+    {
+        allo_entity *to_delete = entity;
+        entity = entity->pointers.le_next;
+        if (strcmp(entity->id, entity_id) == 0)
+        {
+            printf("Removing entity %s for %s\n", to_delete->id, to_delete->owner_agent_id);
+            LIST_REMOVE(to_delete, pointers);
+            break;
+        }
+    }
+}
+
+static void remove_entity_by_owner(const char *owner_id)
+{
+    allo_entity *entity = state.entities.lh_first;
+    while(entity)
+    {
+        allo_entity *to_delete = entity;
+        entity = entity->pointers.le_next;
+        if (entity && strcmp(entity->owner_agent_id, owner_id) == 0)
+        {
+            printf("Removing entity %s for %s\n", to_delete->id, to_delete->owner_agent_id);
+            LIST_REMOVE(to_delete, pointers);
+        }
+    }
+}
+
 static void simulate(long reqId, double dt, cJSON *jintents, ei_x_buff *response)
 {
     int intent_count = cJSON_GetArraySize(jintents);
@@ -151,6 +182,16 @@ void handle_erl()
         cJSON *json = ei_decode_cjson_string(request, &request_index);
         update_entity(reqId, entity_id, json, &response);
     }
+    else if(strcmp(command, "remove_entity") == 0)
+    {
+        char *entity_id = ei_decode_elixir_string(request, &request_index);
+        remove_entity_by_id(entity_id);
+    }
+    else if(strcmp(command, "remove_entities_owned_by") == 0)
+    {
+        char *owner_id = ei_decode_elixir_string(request, &request_index);
+        remove_entity_by_owner(owner_id);
+    }
     else if(strcmp(command, "simulate") == 0)
     {
         double dt;
@@ -174,13 +215,15 @@ void handle_erl()
         printf("statedaemon: Unknown command %s\n", command);
         ei_x_format_wo_ver(&response, "{response, ~l, {error, \"no such command\"}}", reqId);
     }
-    if(response.index == 0)
+    if(response.index == 0 && reqId != -1)
     {
         printf("statedaemon: Missing response to command %s\n", command);
         ei_x_format_wo_ver(&response, "{response, ~l, {error, \"missing response\"}}", reqId);        
     }
 
-    write_cmd((uint8_t*)response.buff, response.index);
+    if(reqId != -1) {
+        write_cmd((uint8_t*)response.buff, response.index);
+    }
 }
 
 int main()

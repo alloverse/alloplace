@@ -38,6 +38,15 @@ defmodule PlaceStoreDaemon do
     }
   end
 
+  def handle_cast(ccall, state) do
+    cmd = elem(ccall, 0)
+    args = Tuple.delete_at(ccall, 0)
+    {:ok, dstate} = Daemon.call_to_c(cmd, args, state)
+    { :noreply,
+      dstate
+    }
+  end
+
   def handle_info({_from, {:data, data}}, state) do
     {:ok, dstate} = Daemon.handle_call_from_c(data, state)
     {

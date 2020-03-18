@@ -34,6 +34,15 @@ defmodule Daemon do
     }
   end
 
+  def call_to_c(cmd, args, state) do
+    msg = {cmd, -1, args}
+    binmsg = :erlang.term_to_binary(msg)
+    send(state.port, {self(), {:command, binmsg}})
+    { :ok,
+      state
+    }
+  end
+
   def handle_call_from_c(data, state) do
     case :erlang.binary_to_term(data) do
       {:response, request_id, payload} ->
