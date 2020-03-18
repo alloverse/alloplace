@@ -94,7 +94,12 @@ static void get_owner_id(long reqId, const char *entity_id, ei_x_buff *response)
     }
 
     assert(entity->owner_agent_id);
-    ei_x_format_wo_ver(response, "{response, ~l, {ok, ~s}}", reqId, entity->owner_agent_id);
+    ei_x_encode_tuple_header(response, 3);
+    ei_x_encode_atom(response, "response");
+    ei_x_encode_long(response, reqId);
+    ei_x_encode_tuple_header(response, 2);
+    ei_x_encode_atom(response, "ok");
+    ei_x_encode_binary(response, entity->owner_agent_id, strlen(entity->owner_agent_id));
 }
 
 
