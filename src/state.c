@@ -62,7 +62,7 @@ static void remove_entity_by_owner(const char *owner_id)
     {
         allo_entity *to_delete = entity;
         entity = entity->pointers.le_next;
-        if (entity && strcmp(entity->owner_agent_id, owner_id) == 0)
+        if (strcmp(to_delete->owner_agent_id, owner_id) == 0)
         {
             printf("Removing entity %s for %s\n", to_delete->id, to_delete->owner_agent_id);
             LIST_REMOVE(to_delete, pointers);
