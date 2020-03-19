@@ -32,13 +32,7 @@ defmodule PlaceEntity do
         )
         avatar = hd(avatars)
 
-        response = %Interaction {
-            from_entity: "place",
-            to_entity: interaction.from_entity,
-            request_id: interaction.request_id,
-            type: "response",
-            body: ["announce", avatar.id, server_state.name]
-        }
+        response = Interaction.make_response(interaction, "place", ["announce", avatar.id, server_state.name])
         Server.send_interaction(server_state, client.id, response)
 
         {:ok, %ServerState{server_state|
@@ -70,14 +64,7 @@ defmodule PlaceEntity do
             interaction.from_entity,
             %{ live_media: media_comp}
         )
-
-        response = %Interaction {
-            from_entity: "place",
-            to_entity: interaction.from_entity,
-            request_id: interaction.request_id,
-            type: "response",
-            body: ["allocate_track", "ok", track_id]
-        }
+        response = Interaction.make_response(interaction, "place", ["allocate_track", "ok", track_id])
         Server.send_interaction(server_state, client.id, response)
 
         {:ok, %ServerState{server_state|
@@ -92,13 +79,7 @@ defmodule PlaceEntity do
             :body => ["lol", _a, _b, _c]
         } = interaction
     ) do
-        response = %Interaction {
-            from_entity: "place",
-            to_entity: interaction.from_entity,
-            request_id: interaction.request_id,
-            type: "response",
-            body: ["yeah, very funny"]
-        }
+        response = Interaction.make_response(interaction, "place", ["yeah, very funny"])
         Logger.info("Got lol: #{inspect(interaction)}")
 
         Server.send_interaction(server_state, response)
@@ -113,13 +94,9 @@ defmodule PlaceEntity do
         } = interaction
     ) do
         Logger.info("Unhandled place request interaction: #{inspect(interaction)}")
-        response = %Interaction {
-            from_entity: "place",
-            to_entity: interaction.from_entity,
-            request_id: interaction.request_id,
-            type: "response",
-            body: [hd(interaction.body), "failed", "#{server_state.name} doesn't understand #{hd(interaction.body)}"]
-        }
+        response = Interaction.make_response(interaction, "place",
+            [hd(interaction.body), "failed", "#{server_state.name} doesn't understand #{hd(interaction.body)}"]
+        )
         Server.send_interaction(server_state, response)
 
         {:ok, server_state}

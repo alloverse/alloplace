@@ -74,6 +74,16 @@ defmodule Interaction do
       body: body
     }
   end
+
+  def make_response(request, sender, body) do
+    %Interaction{
+      type: "response",
+      from_entity: sender,
+      to_entity: request.from_entity,
+      request_id: request.request_id,
+      body: body
+    }
+  end
 end
 defimpl Jason.Encoder, for: Interaction do
   def encode(struct, opts) do
