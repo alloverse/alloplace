@@ -27,17 +27,23 @@ defmodule PlaceEntity do
         PlaceStore.add_entity(AlloProcs.Store, %Entity{
             id: "place-button",
             components: %{
-                transform: %TransformComponent{},
+                transform: %TransformComponent{
+                    matrix: Graphmath.Mat44.make_translate(0, 0.9, 0)
+                },
                 relationships: %RelationshipsComponent {
                     parent: "place"
                 },
                 geometry: %{
                     type: "inline",
                                #  bl                 # br                 #tl                    #tr
-                    vertices: [[0.1, 0.9, -0.1],     [0.1, 0.9, 0.1],     [-0.1, 1.0, -0.1],     [-0.1, 1.0, 0.1]],
+                    vertices: [[0.1, 0.0, -0.1],     [0.1, 0.0, 0.1],     [-0.1, 0.1, -0.1],     [-0.1, 0.1, 0.1]],
                     uvs:      [[0.0, 0.0],           [1.0, 0.0],          [0.0, 1.0],            [1.0, 1.0]],
                     triangles: [[0, 3, 1], [0, 2, 3]],
                     texture: "iVBORw0KGgoAAAANSUhEUgAAAEAAAABACAIAAAAlC+aJAAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAJcEhZcwAADsMAAA7DAcdvqGQAAAD8SURBVGhD7c/LCcJgFERhq7Qgy3CfRXoQXItNGYmEeMyQbEbuhYFv9T9gzun6fPR1HofGAdP6xgHz+q4By/qWAev1/QKwftIpANNnbQKwe9EjAKPXGgRgMVQPwNxfpQOwddPRgMv99mcYqiTABkOVBNhgqJIAGwxVEmCDoUoCbDBUSYANhioJsMFQJQE2GKokwAZDlQTYYKiSABsMVRJgg6FKAmwwVEmADYYqCbDBUCUBNhiqJMAGQ5UE2GCokgAbDFUSYIOhytEAfKvjUAD+lLIfgA/V7ATgdUEyAO/K2g7Ao8o2AvCiOAbgur6vANy18AnAaSPvABx1Mg4vbr0dVP2tGoQAAAAASUVORK5CYII="
+                },
+                collider: %{
+                    type: "box",
+                    width: 0.2, height: 0.2, depth: 0.2
                 }
             }
         })
@@ -99,6 +105,36 @@ defmodule PlaceEntity do
         {:ok, %ServerState{server_state|
             next_free_track: track_id + 1,
         }}
+    end
+
+    def handle_interaction(server_state,
+        _client,
+        %Interaction{
+            :body => ["point", [_ax, _ay, _az], [_bx, _by, _bz]]
+        }
+    ) do
+        {:ok, server_state}
+    end
+
+    def handle_interaction(server_state,
+        client,
+        %Interaction{
+            :body => ["poke", buttonDown]
+        } = interaction
+    ) do
+        response = Interaction.make_response(interaction, "place-button", ["poke", "ok"])
+        Server.send_interaction(server_state, client.id, response)
+        :ok = PlaceStore.update_entity(AlloProcs.Store,
+            "place-button",
+            %{
+                transform: %TransformComponent{
+                    matrix: Graphmath.Mat44.make_translate(0, (if buttonDown, do: 0.88, else: 0.9), 0)
+                },
+            }
+        )
+
+
+        {:ok, server_state}
     end
 
 
