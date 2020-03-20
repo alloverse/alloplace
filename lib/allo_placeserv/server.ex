@@ -161,7 +161,6 @@ defmodule Server do
   def handle_info({:client_interaction, from_client_id, interaction_packet}, state) do
     interaction = Interaction.from_list(interaction_packet)
     from_client = state.clients[from_client_id]
-    Logger.info("From #{from_client_id}, #{inspect(interaction)}")
 
     # ensure valid from (note: pattern match)
     if interaction.from_entity != "" do
@@ -279,7 +278,6 @@ defmodule Server do
   # send to specific client, if you already know which client owns an entity
   def send_interaction(state, dest_client_id, interaction) do
     {:ok, json} = Jason.encode(interaction)
-    Logger.info("Sending interaction #{json} to #{dest_client_id}")
     payload = json <> "\n"
     :ok = MmAllonet.netsend(
       state.mmallo,
