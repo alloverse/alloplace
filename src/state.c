@@ -34,16 +34,9 @@ static void update_entity(long reqId, const char *entity_id, cJSON *comps, ei_x_
     cJSON *comp = NULL;
     cJSON_ArrayForEach(comp, comps)
     {
-        if(cJSON_HasObjectItem(entity->components, comp->string))
-        {
-            cJSON_ReplaceItemInObject(entity->components, comp->string, comp);
-        }
-        else
-        {
-            cJSON_AddItemToObject(entity->components, comp->string, comp);
-        }
+        cJSON_DeleteItemFromObject(entity->components, comp->string);
+        cJSON_AddItemToObject(entity->components, comp->string, comp);
     }
-
     ei_x_format_wo_ver(response, "{response, ~l, ok}", reqId);
 }
 
