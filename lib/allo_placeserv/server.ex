@@ -134,7 +134,7 @@ defmodule Server do
     reply = PlaceStore.ping(AlloProcs.Store)
     Logger.info("state replies? #{reply}")
 
-    :ok = PlaceStore.add_entity(AlloProcs.Store, %PlaceEntity{})
+    :ok = PlaceEntity.init()
 
     { :ok,
       %ServerState{initial_state|
@@ -252,9 +252,10 @@ defmodule Server do
   defp handle_interaction(state,
     from_client,
     %Interaction{
-      to_entity: "place"
+      to_entity: p
     } = interaction
-  ) do
+  ) when p == "place" or p == "place-button"
+  do
     PlaceEntity.handle_interaction(state, from_client, interaction)
   end
   # anything else? route it to the owner.
