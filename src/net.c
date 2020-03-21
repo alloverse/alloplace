@@ -133,14 +133,29 @@ void client_sent(alloserver *serv, alloserver_client *client, allochannel channe
 
 int main()
 {
-    if(!allo_initialize(false)) {
+    if(!allo_initialize(false)) 
+    {
         fprintf(stderr, "Unable to initialize allonet");
         return -1;
     }
 
-    serv = allo_listen();
+    int retries = 3;
+    while (!serv)
+    {
+        serv = allo_listen();
+        if(!serv) {
+            fprintf(stderr, "Unable to open listen socket, ");
+            if(retries-- > 0) {
+                fprintf(stderr, "retrying %d more times...\n", retries);
+                sleep(1);
+            } else {
+                fprintf(stderr, "giving up. Is another server running?\n");
+                break;
+            }
+        }
+    }
+    
     if(!serv) {
-        fprintf(stderr, "Unable to create allonet server. Is port in use?\n");
         perror("errno");
         return -2;
     }
