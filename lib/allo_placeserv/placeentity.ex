@@ -22,9 +22,9 @@ defmodule PlaceEntity do
             }
         }
 
-    def init() do
-        PlaceStore.add_entity(AlloProcs.Store, %PlaceEntity{})
-        PlaceStore.add_entity(AlloProcs.Store, %Entity{
+    def init(store) do
+        PlaceStore.add_entity(store, %PlaceEntity{})
+        PlaceStore.add_entity(store, %Entity{
             id: "place-button",
             components: %{
                 transform: %TransformComponent{
@@ -60,7 +60,7 @@ defmodule PlaceEntity do
         avatars = entities_for_desc(avatardesc, client.id, %RelationshipsComponent{})
         true = Enum.all?(
             Enum.map(avatars, fn avatar ->
-               PlaceStore.add_entity(AlloProcs.Store, avatar)
+               PlaceStore.add_entity(server_state.store, avatar)
             end), fn result ->
                result == :ok
             end
@@ -95,7 +95,7 @@ defmodule PlaceEntity do
             format: media_format
         }
 
-        :ok = PlaceStore.update_entity(AlloProcs.Store,
+        :ok = PlaceStore.update_entity(server_state.store,
             interaction.from_entity,
             %{ live_media: media_comp}
         )
@@ -124,7 +124,10 @@ defmodule PlaceEntity do
     ) do
         response = Interaction.make_response(interaction, "place-button", ["poke", "ok"])
         Server.send_interaction(server_state, client.id, response)
-        :ok = PlaceStore.update_entity(AlloProcs.Store,
+        if buttonDown == false do
+            3 = 4
+        end
+        :ok = PlaceStore.update_entity(server_state.store,
             "place-button",
             %{
                 transform: %TransformComponent{

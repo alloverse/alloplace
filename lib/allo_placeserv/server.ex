@@ -3,7 +3,8 @@ defmodule ServerState do
     mmallo: nil,
     push_state_timer: nil,
     name: "Unnamed place",
-    next_free_track: 1
+    next_free_track: 1,
+    store: nil
 
   @type t :: %ServerState{
     clients: %{required(String.t()) => ClientRef.t()},
@@ -124,6 +125,7 @@ defmodule Server do
   def init(initial_state) do
     Logger.info("Starting Alloverse Place server '#{initial_state.name}'")
     {:ok, mmallo} = MmAllonet.start_link([], self(), 31337)
+    {:ok, store} = PlaceStoreDaemon.start_link([])
 
     # update state and send world state @ 20hz
     {:ok, tref} = :timer.send_interval(Kernel.trunc(1000/20), self(), {:timer, 1.0/20.0})
@@ -131,15 +133,17 @@ defmodule Server do
     reply = MmAllonet.ping(mmallo)
     Logger.info("net replies? #{reply}")
 
-    reply = PlaceStore.ping(AlloProcs.Store)
+    reply = PlaceStore.ping(store)
     Logger.info("state replies? #{reply}")
 
-    :ok = PlaceEntity.init()
+    :ok = PlaceEntity.init(store)
 
     { :ok,
       %ServerState{initial_state|
-      push_state_timer: tref,
-      mmallo: mmallo}
+        push_state_timer: tref,
+        mmallo: mmallo,
+        store: store
+      }
     }
   end
 
@@ -164,7 +168,7 @@ defmodule Server do
 
     # ensure valid from (note: pattern match)
     if interaction.from_entity != "" do
-      {:ok, _} = PlaceStore.get_owner_id(AlloProcs.Store, interaction.from_entity)
+      {:ok, _} = PlaceStore.get_owner_id(state.store, interaction.from_entity)
     end
 
     # ensure announced
@@ -224,10 +228,10 @@ defmodule Server do
     # 1. Simulate the world
     intents = Enum.map(Map.values(state.clients), fn client -> client.intent end)
 
-    :ok = PlaceStore.simulate(AlloProcs.Store, delta, intents)
+    :ok = PlaceStore.simulate(state.store, delta, intents)
 
     # 2. Broadcast new states
-    {:ok, snapshot} = PlaceStore.get_snapshot(AlloProcs.Store)
+    {:ok, snapshot} = PlaceStore.get_snapshot(state.store)
     send_snapshot(state, snapshot)
     {:noreply, state}
   end
@@ -270,7 +274,7 @@ defmodule Server do
   def send_interaction(state, %Interaction{
       to_entity: to
     } = interaction) do
-    {:ok, dest_owner_id} = PlaceStore.get_owner_id(AlloProcs.Store, to)
+    {:ok, dest_owner_id} = PlaceStore.get_owner_id(state.store, to)
     _dest_client = state.clients[dest_owner_id]
     send_interaction(state, dest_owner_id, interaction)
   end
@@ -303,7 +307,7 @@ defmodule Server do
   defp remove_client(client_id, state) do
     Logger.info("Client disconnected: #{client_id}")
     {:ok, _clientref} = Map.fetch(state.clients, client_id)
-    :ok = PlaceStore.remove_entities_owned_by(AlloProcs.Store, client_id)
+    :ok = PlaceStore.remove_entities_owned_by(state.store, client_id)
     {
       :ok,
       %ServerState{state|
