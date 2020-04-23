@@ -117,6 +117,15 @@ defmodule PlaceEntity do
     end
 
     def handle_interaction(server_state,
+    _client,
+        %Interaction{
+            :body => ["point-exit"]
+        }
+    ) do
+        {:ok, server_state}
+    end
+
+    def handle_interaction(server_state,
         client,
         %Interaction{
             :body => ["poke", buttonDown]
