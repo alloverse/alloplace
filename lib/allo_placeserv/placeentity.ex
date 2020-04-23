@@ -193,10 +193,10 @@ defmodule PlaceEntity do
         thisEnt = %Entity{
             id: Allomisc.generate_id(),
             owner: owner,
-            components: Map.merge(thisDesc, %{
+            components: Map.merge(%{
                 transform: %TransformComponent{},
                 relationships: relationships
-            })
+            }, thisDesc)
         }
         childEnts = Enum.flat_map(childDescs, fn childDesc ->
             entities_for_desc(childDesc, owner, %RelationshipsComponent{parent: thisEnt.id})
