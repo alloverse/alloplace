@@ -81,6 +81,23 @@ defmodule PlaceEntity do
     def handle_interaction(server_state,
         client,
         %Interaction{
+            :body => ["change_components", eid, "add_or_change", changelist, "remove", removelist]
+        } = interaction
+    ) do
+        clientId = client.id
+        {:ok, ^clientId} = PlaceStore.get_owner_id(server_state.store, eid)
+
+        :ok = PlaceStore.update_entity(server_state.store, eid, changelist, removelist)
+
+        response = Interaction.make_response(interaction, "place", ["change_components", "ok"])
+        Server.send_interaction(server_state, client.id, response)
+
+        {:ok, server_state}
+    end
+
+    def handle_interaction(server_state,
+        client,
+        %Interaction{
             :body => ["allocate_track", media_type, sample_rate, channel_count, media_format]
         } = interaction
     ) do
@@ -97,7 +114,8 @@ defmodule PlaceEntity do
 
         :ok = PlaceStore.update_entity(server_state.store,
             interaction.from_entity,
-            %{ live_media: media_comp}
+            %{ live_media: media_comp},
+            []
         )
         response = Interaction.make_response(interaction, "place", ["allocate_track", "ok", track_id])
         Server.send_interaction(server_state, client.id, response)
@@ -142,7 +160,8 @@ defmodule PlaceEntity do
                 transform: %TransformComponent{
                     matrix: Graphmath.Mat44.make_translate(0, (if buttonDown, do: 0.88, else: 0.9), 0)
                 },
-            }
+            },
+            []
         )
 
 

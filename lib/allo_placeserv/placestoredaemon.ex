@@ -28,7 +28,10 @@ defmodule PlaceStoreDaemon do
     cmd = elem(ccall, 0)
     args = case ccall do
       {:add_entity, entity} -> with {:ok, json} <- Jason.encode(entity), do: {json}
-      {:update_entity, eid, comps} -> with {:ok, json} <- Jason.encode(comps), do: {eid, json}
+      {:update_entity, eid, comps, rmcomps} -> with(
+        {:ok, cjson} <- Jason.encode(comps),
+        {:ok, rmjson} <- Jason.encode(rmcomps),
+        do: {eid, cjson, rmjson})
       {:simulate, dt, intents} -> with {:ok, json} <- Poison.encode(intents), do: {dt, json}
       _ -> Tuple.delete_at(ccall, 0)
     end

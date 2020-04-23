@@ -28,7 +28,7 @@ static void add_entity(long reqId, cJSON *json, ei_x_buff *response)
     ei_x_format_wo_ver(response, "{response, ~l, ok}", reqId);
 }
 
-static void update_entity(long reqId, const char *entity_id, cJSON *comps, ei_x_buff *response)
+static void update_entity(long reqId, const char *entity_id, cJSON *comps, cJSON *rmcomps, ei_x_buff *response)
 {
     allo_entity *entity = state_get_entity(&state, entity_id);
     cJSON *comp = NULL;
@@ -36,6 +36,10 @@ static void update_entity(long reqId, const char *entity_id, cJSON *comps, ei_x_
     {
         cJSON_DeleteItemFromObject(entity->components, comp->string);
         cJSON_AddItemToObject(entity->components, comp->string, comp);
+    }
+    cJSON_ArrayForEach(comp, rmcomps)
+    {
+        cJSON_DeleteItemFromObject(entity->components, comp->valuestring);
     }
     ei_x_format_wo_ver(response, "{response, ~l, ok}", reqId);
 }
@@ -180,8 +184,10 @@ void handle_erl()
     else if(strcmp(command, "update_entity") == 0)
     {
         char *entity_id = ei_decode_elixir_string(request, &request_index);
-        cJSON *json = ei_decode_cjson_string(request, &request_index);
-        update_entity(reqId, entity_id, json, &response);
+        cJSON *cjson = ei_decode_cjson_string(request, &request_index);
+        cJSON *rmjson = ei_decode_cjson_string(request, &request_index);
+
+        update_entity(reqId, entity_id, cjson, rmjson, &response);
     }
     else if(strcmp(command, "remove_entity") == 0)
     {

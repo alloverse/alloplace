@@ -81,9 +81,10 @@ defmodule PlaceStore do
     `entity_id`: the entity to update
     `components`: Map of key string component name to value map of component
                 attributes
+    `removecomps`: List of component names to remove from the entity
   """
-  def update_entity(server, entity_id, components) do
-    GenServer.call(server, {:update_entity, entity_id, components})
+  def update_entity(server, entity_id, components, removecomps) do
+    GenServer.call(server, {:update_entity, entity_id, components, removecomps})
   end
 
   def get_snapshot(server) do
