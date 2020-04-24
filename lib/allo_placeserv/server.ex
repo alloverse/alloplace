@@ -76,10 +76,10 @@ defmodule Interaction do
     }
   end
 
-  def make_response(request, sender, body) do
+  def make_response(request, body) do
     %Interaction{
-      type: "response",
-      from_entity: sender,
+      type: if(request.type=="request", do: "response", else: "one-way"),
+      from_entity: request.to_entity,
       to_entity: request.from_entity,
       request_id: request.request_id,
       body: body
@@ -166,18 +166,25 @@ defmodule Server do
     interaction = Interaction.from_list(interaction_packet)
     from_client = state.clients[from_client_id]
 
-    # ensure valid from (note: pattern match)
-    if interaction.from_entity != "" do
-      {:ok, _} = PlaceStore.get_owner_id(state.store, interaction.from_entity)
+    # Sanity check the message before processing it
+    if(
+      # ensure first message is announce
+      (from_client.avatar_id != nil or hd(interaction.body) == "announce") and
+      if interaction.from_entity == "",
+        # from-entity must be set unless announce
+        do: hd(interaction.body) == "announce",
+        # if we do have a from-entity, make sure that entity is owned by this client
+        else: {:ok, from_client_id} == PlaceStore.get_owner_id(state.store, interaction.from_entity)
+    ) do
+      {:ok, newstate} = handle_interaction(state, from_client, interaction)
+      {:noreply, newstate}
+    else
+      Logger.error("Place interaction #{inspect(interaction)} from #{from_client.id} was forbidden. Sender is owned by #{inspect(PlaceStore.get_owner_id(state.store, interaction.from_entity))}")
+      Server.send_interaction(state, from_client.id, Interaction.make_response(interaction, ["error", "forbidden_request", hd(interaction.body)]))
+      {:noreply, state}
     end
-
-    # ensure announced
-    true = (from_client.avatar_id != nil || hd(interaction.body) == "announce")
-
-    # go handle
-    {:ok, newstate} = handle_interaction(state, from_client, interaction)
-    {:noreply, newstate}
   end
+
   def handle_info({:new_client, client_id}, state) do
     {:ok, state} = add_client(client_id, state)
     {:noreply, state}
@@ -259,24 +266,31 @@ defmodule Server do
     } = interaction
   ) when p == "place" or p == "place-button"
   do
-    PlaceEntity.handle_interaction(state, from_client, interaction)
+    try do
+      PlaceEntity.handle_interaction(state, from_client, interaction)
+    rescue
+      e ->
+        Logger.error("Place interaction #{inspect(interaction)} from #{from_client.id} failed terribly: #{inspect(e)}")
+        Server.send_interaction(state, from_client.id, Interaction.make_response(interaction, ["error", "invalid_request", hd(interaction.body)]))
+        {:ok, state}
+    end
   end
   # anything else? route it to the owner.
   defp handle_interaction(state,
-    _from_client,
-    %Interaction{} = interaction
-  ) do
-    send_interaction(state, interaction)
-    {:ok, state}
-  end
-
-  # send to an entity
-  def send_interaction(state, %Interaction{
+    from_client,
+    %Interaction{
       to_entity: to
-    } = interaction) do
-    {:ok, dest_owner_id} = PlaceStore.get_owner_id(state.store, to)
-    _dest_client = state.clients[dest_owner_id]
-    send_interaction(state, dest_owner_id, interaction)
+    } = interaction
+  ) do
+    try do
+      {:ok, dest_owner_id} = PlaceStore.get_owner_id(state.store, to)
+      send_interaction(state, dest_owner_id, interaction)
+    rescue
+      MatchError ->
+        Logger.error("Failed interaction #{inspect(interaction)} to #{to} which doesn't exist or missing owner")
+        Server.send_interaction(state, from_client.id, Interaction.make_response(interaction, ["error", "invalid_recipient", hd(interaction.body), to]))
+    end
+    {:ok, state}
   end
 
   # send to specific client, if you already know which client owns an entity

@@ -67,7 +67,7 @@ defmodule PlaceEntity do
         )
         avatar = hd(avatars)
 
-        response = Interaction.make_response(interaction, "place", ["announce", avatar.id, server_state.name])
+        response = Interaction.make_response(interaction, ["announce", avatar.id, server_state.name])
         Server.send_interaction(server_state, client.id, response)
 
         {:ok, %ServerState{server_state|
@@ -89,7 +89,7 @@ defmodule PlaceEntity do
 
         :ok = PlaceStore.update_entity(server_state.store, eid, changelist, removelist)
 
-        response = Interaction.make_response(interaction, "place", ["change_components", "ok"])
+        response = Interaction.make_response(interaction, ["change_components", "ok"])
         Server.send_interaction(server_state, client.id, response)
 
         {:ok, server_state}
@@ -117,7 +117,7 @@ defmodule PlaceEntity do
             %{ live_media: media_comp},
             []
         )
-        response = Interaction.make_response(interaction, "place", ["allocate_track", "ok", track_id])
+        response = Interaction.make_response(interaction, ["allocate_track", "ok", track_id])
         Server.send_interaction(server_state, client.id, response)
 
         {:ok, %ServerState{server_state|
@@ -149,7 +149,7 @@ defmodule PlaceEntity do
             :body => ["poke", buttonDown]
         } = interaction
     ) do
-        response = Interaction.make_response(interaction, "place-button", ["poke", "ok"])
+        response = Interaction.make_response(interaction, ["poke", "ok"])
         Server.send_interaction(server_state, client.id, response)
         if buttonDown == false do
             3 = 4
@@ -170,30 +170,30 @@ defmodule PlaceEntity do
 
 
     def handle_interaction(server_state,
-        _client,
+        client,
         %Interaction{
             :body => ["lol", _a, _b, _c]
         } = interaction
     ) do
-        response = Interaction.make_response(interaction, "place", ["yeah, very funny"])
+        response = Interaction.make_response(interaction, ["yeah, very funny"])
         Logger.info("Got lol: #{inspect(interaction)}")
 
-        Server.send_interaction(server_state, response)
+        Server.send_interaction(server_state, client.id, response)
 
         {:ok, server_state}
     end
 
     def handle_interaction(server_state,
-        _client,
+        client,
         %Interaction{
             :type => "request"
         } = interaction
     ) do
         Logger.info("Unhandled place request interaction: #{inspect(interaction)}")
-        response = Interaction.make_response(interaction, "place",
-            [hd(interaction.body), "failed", "#{server_state.name} doesn't understand #{hd(interaction.body)}"]
+        response = Interaction.make_response(interaction,
+            ["error", "#{server_state.name} doesn't understand #{hd(interaction.body)}"]
         )
-        Server.send_interaction(server_state, response)
+        Server.send_interaction(server_state, client.id, response)
 
         {:ok, server_state}
     end
