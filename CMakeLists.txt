@@ -34,5 +34,13 @@ target_link_libraries(AlloNetPort "erl_interface" "ei" "allonet")
 add_executable(
   AlloStatePort src/erl_comm.c src/state.c src/util.c
 )
+
+
 target_link_libraries(AlloStatePort "erl_interface" "ei" "allonet")
 
+if(APPLE)
+  target_link_libraries(AlloNetPort "-framework CoreFoundation")
+  set_target_properties(AlloNetPort PROPERTIES LINK_FLAGS "-Wl,-F/Library/Frameworks")
+  target_link_libraries(AlloStatePort "-framework CoreFoundation")
+  set_target_properties(AlloStatePort PROPERTIES LINK_FLAGS "-Wl,-F/Library/Frameworks")
+endif()
