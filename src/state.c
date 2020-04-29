@@ -32,11 +32,15 @@ static void update_entity(long reqId, const char *entity_id, cJSON *comps, cJSON
 {
     allo_entity *entity = state_get_entity(&state, entity_id);
     cJSON *comp = NULL;
-    cJSON_ArrayForEach(comp, comps)
+    for(cJSON *comp = comps->child; comp != NULL;)
     {
+        cJSON *next = comp->next;
         cJSON_DeleteItemFromObject(entity->components, comp->string);
+        cJSON_DetachItemViaPointer(comps, comp);
         cJSON_AddItemToObject(entity->components, comp->string, comp);
+        comp = next;
     }
+    
     cJSON_ArrayForEach(comp, rmcomps)
     {
         cJSON_DeleteItemFromObject(entity->components, comp->valuestring);
@@ -55,6 +59,7 @@ static void remove_entity_by_id(const char *entity_id)
         {
             printf("Removing entity %s for %s\n", to_delete->id, to_delete->owner_agent_id);
             LIST_REMOVE(to_delete, pointers);
+            entity_destroy(to_delete);
             break;
         }
     }
@@ -71,6 +76,7 @@ static void remove_entity_by_owner(const char *owner_id)
         {
             printf("Removing entity %s for %s\n", to_delete->id, to_delete->owner_agent_id);
             LIST_REMOVE(to_delete, pointers);
+            entity_destroy(to_delete);
         }
     }
 }
@@ -111,12 +117,12 @@ static void get_snapshot(long reqId, ei_x_buff *response)
         cJSON_AddItemToObject(jentities, entity->id, jentity);
     }
 
-    cJSON *jresponse = cjson_create_object(
+    scopedj cJSON *jresponse = cjson_create_object(
         "revision", cJSON_CreateNumber(state.revision),
         "entities", jentities,
         NULL
     );
-    char *jsons = cJSON_PrintUnformatted(jresponse);
+    scoped char *jsons = cJSON_PrintUnformatted(jresponse);
     
     // Respond with  {response, ResponseId, {ok, JSON}} where JSON is a binary, which is not something
     // we can express with ei_x_format.
@@ -126,9 +132,6 @@ static void get_snapshot(long reqId, ei_x_buff *response)
     ei_x_encode_tuple_header(response, 2);
     ei_x_encode_atom(response, "ok");
     ei_x_encode_binary(response, jsons, strlen(jsons));
-
-    free(jsons);
-    cJSON_Delete(jresponse);
 }
 
 static void get_owner_id(long reqId, const char *entity_id, ei_x_buff *response)
@@ -178,32 +181,32 @@ void handle_erl()
     }
     else if(strcmp(command, "add_entity") == 0)
     {
-        cJSON *json = ei_decode_cjson_string(request, &request_index);
+        scopedj cJSON *json = ei_decode_cjson_string(request, &request_index);
         add_entity(reqId, json, &response);
     }
     else if(strcmp(command, "update_entity") == 0)
     {
-        char *entity_id = ei_decode_elixir_string(request, &request_index);
-        cJSON *cjson = ei_decode_cjson_string(request, &request_index);
-        cJSON *rmjson = ei_decode_cjson_string(request, &request_index);
+        scoped char *entity_id = ei_decode_elixir_string(request, &request_index);
+        scopedj cJSON *cjson = ei_decode_cjson_string(request, &request_index);
+        scopedj cJSON *rmjson = ei_decode_cjson_string(request, &request_index);
 
         update_entity(reqId, entity_id, cjson, rmjson, &response);
     }
     else if(strcmp(command, "remove_entity") == 0)
     {
-        char *entity_id = ei_decode_elixir_string(request, &request_index);
+        scoped char *entity_id = ei_decode_elixir_string(request, &request_index);
         remove_entity_by_id(entity_id);
     }
     else if(strcmp(command, "remove_entities_owned_by") == 0)
     {
-        char *owner_id = ei_decode_elixir_string(request, &request_index);
+        scoped char *owner_id = ei_decode_elixir_string(request, &request_index);
         remove_entity_by_owner(owner_id);
     }
     else if(strcmp(command, "simulate") == 0)
     {
         double dt;
         assert(ei_decode_double(request, &request_index, &dt) == 0);
-        cJSON *json = ei_decode_cjson_string(request, &request_index);
+        scopedj cJSON *json = ei_decode_cjson_string(request, &request_index);
         simulate(reqId, dt, json, &response);
     }
     else if(strcmp(command, "get_snapshot") == 0)
@@ -213,9 +216,8 @@ void handle_erl()
     else if(strcmp(command, "get_owner_id") == 0)
     {
         assert(argsLen == 1);
-        char *owner_id = ei_decode_elixir_string(request, &request_index);
+        scoped char *owner_id = ei_decode_elixir_string(request, &request_index);
         get_owner_id(reqId, owner_id, &response);
-        free(owner_id);
     }
     else
     {
@@ -260,6 +262,10 @@ int main()
         int selectr = enet_socketset_select(erlin, &set, NULL, 100);
         if(selectr < 0)
         {
+            if(errno == EINTR) {
+                // debugger attached or something, just retry
+                continue;
+            }
             perror("select failed, terminating");
             return -3;
         }
