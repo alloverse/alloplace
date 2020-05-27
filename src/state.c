@@ -84,22 +84,17 @@ static void remove_entity_by_owner(const char *owner_id)
 static void simulate(long reqId, double dt, cJSON *jintents, ei_x_buff *response)
 {
     int intent_count = cJSON_GetArraySize(jintents);
-    allo_client_intent intents[intent_count];
+    allo_client_intent *intents[intent_count];
     for(int i = 0; i < intent_count; i++)
     {
         cJSON *jintent = cJSON_GetArrayItem(jintents, i);
-        intents[i].entity_id = cJSON_GetObjectItem(jintent, "entity_id")->valuestring;
-        intents[i].zmovement = cJSON_GetObjectItem(jintent, "zmovement")->valuedouble;
-        intents[i].xmovement = cJSON_GetObjectItem(jintent, "xmovement")->valuedouble;
-        intents[i].yaw = cJSON_GetObjectItem(jintent, "yaw")->valuedouble;
-        intents[i].pitch = cJSON_GetObjectItem(jintent, "pitch")->valuedouble;
-
-        cJSON *poses = cJSON_GetObjectItem(jintent, "poses");
-        intents[i].poses.head.matrix = cjson2m(cJSON_GetObjectItem(cJSON_GetObjectItem(poses, "head"), "matrix"));
-        intents[i].poses.left_hand.matrix = cjson2m(cJSON_GetObjectItem(cJSON_GetObjectItem(poses, "hand/left"), "matrix"));
-        intents[i].poses.right_hand.matrix = cjson2m(cJSON_GetObjectItem(cJSON_GetObjectItem(poses, "hand/right"), "matrix"));
+        intents[i] = allo_client_intent_parse_cjson(jintent);
     }
     allo_simulate(&state, dt, intents, intent_count);
+    for(int i = 0; i < intent_count; i++)
+    {
+        allo_client_intent_free(intents[i]);
+    }
 
     ei_x_format_wo_ver(response, "{response, ~l, ok}", reqId);
 }

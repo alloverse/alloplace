@@ -15,21 +15,30 @@ defmodule ServerState do
   }
 end
 
+defmodule PoseGrab do
+  @derive [Poison.Encoder, Poison.Decoder]
+  defstruct entity: "",
+    held_at: [0,0,0]
+end
+
 defmodule Pose do
-  defstruct matrix: Graphmath.Mat44.identity()
+  defstruct matrix: Graphmath.Mat44.identity(),
+    grab: %PoseGrab{}
 end
 defimpl Poison.Decoder, for: Pose do
   # Convert matrix from list to Mat44
-  def decode(value, _options) do
+  def decode(value, options) do
     %Pose{
-      matrix: List.to_tuple(value.matrix)
+      matrix: List.to_tuple(value.matrix),
+      grab: value.grab
     }
   end
 end
 defimpl Poison.Encoder, for: Pose do
   def encode(value, options) do
     Poison.Encoder.encode(%{
-      matrix: Tuple.to_list(value.matrix)
+      matrix: Tuple.to_list(value.matrix),
+      grab: value.grab
     }, options)
   end
 end
