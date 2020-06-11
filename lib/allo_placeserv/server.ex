@@ -205,7 +205,7 @@ defmodule Server do
 
   def handle_info({:client_media, from_client_id, incoming_payload}, state) do
     # incoming message is track id as 32bit big endian integer, followed by media payload
-    #<<track_id :: unsigned-big-integer-size(32), media_packet>> = incoming_payload
+    #<<track_id :: unsigned-big-integer-size(32), media_packet, zero :: integer-size(8)>> = incoming_payload
 
     # todo: lookup a LiveMediaComponent with a matching track ID and
     # assert that from_client_id owns that entity.

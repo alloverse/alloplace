@@ -121,6 +121,11 @@ void clients_changed(alloserver *serv, alloserver_client *added, alloserver_clie
 
 void client_sent(alloserver *serv, alloserver_client *client, allochannel channel, const uint8_t *data, size_t data_length)
 {
+    if(channel != CHANNEL_MEDIA) {
+        // UGGGHHHH erlang can't take the last null byte so take it out.
+        // EXCEPT for channel 3 which is MEDIA which needs to be preserved exactly as-is end-to-end!
+        data_length -= 1;
+    }
     scoped_comp ETERM *msg = erl_format(
         "{client_sent, ~w, ~i, ~w}",
         erl_mk_binary(client->agent_id, AGENT_ID_LENGTH),
