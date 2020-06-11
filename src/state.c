@@ -20,7 +20,7 @@ static void add_entity(long reqId, cJSON *json, ei_x_buff *response)
     printf("Adding entity %s for %s\n", entity_id, owner_id);
     allo_entity *ent = entity_create(entity_id);
 
-    ent->owner_agent_id = strdup(owner_id);
+    ent->owner_agent_id = allo_strdup(owner_id);
     cJSON *components = cJSON_DetachItemFromObject(json, "components");
     ent->components = components;
     LIST_INSERT_HEAD(&state.entities, ent, pointers);
