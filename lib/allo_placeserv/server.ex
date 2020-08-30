@@ -16,21 +16,26 @@ defmodule ServerState do
 end
 
 defmodule PoseGrab do
-  @derive [Poison.Encoder, Poison.Decoder]
   defstruct entity: "",
-    held_at: [0,0,0]
+    grabber_from_entity_transform: Graphmath.Mat44.identity()
 end
-
 defmodule Pose do
   defstruct matrix: Graphmath.Mat44.identity(),
     grab: %PoseGrab{}
 end
 defimpl Poison.Decoder, for: Pose do
   # Convert matrix from list to Mat44
-  def decode(value, options) do
+  def decode(value, _) do
     %Pose{
       matrix: List.to_tuple(value.matrix),
-      grab: value.grab
+      grab: %PoseGrab{ # ?? can't get Poison.Decoder, for: PoseGrab to work
+        grabber_from_entity_transform:
+          if(is_tuple(value.grab.grabber_from_entity_transform), do:
+            value.grab.grabber_from_entity_transform,
+          else:
+            List.to_tuple(value.grab.grabber_from_entity_transform)),
+        entity: value.grab.entity
+      }
     }
   end
 end
@@ -38,7 +43,10 @@ defimpl Poison.Encoder, for: Pose do
   def encode(value, options) do
     Poison.Encoder.encode(%{
       matrix: Tuple.to_list(value.matrix),
-      grab: value.grab
+      grab: %{
+        grabber_from_entity_transform: Tuple.to_list(value.grab.grabber_from_entity_transform),
+        entity: value.grab.entity
+      }
     }, options)
   end
 end
@@ -243,7 +251,6 @@ defmodule Server do
   def handle_timer(delta, state) do
     # 1. Simulate the world
     intents = Enum.map(Map.values(state.clients), fn client -> client.intent end)
-
     :ok = PlaceStore.simulate(state.store, delta, intents)
 
     # 2. Broadcast new states
