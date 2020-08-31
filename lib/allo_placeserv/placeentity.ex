@@ -12,41 +12,10 @@ defmodule PlaceEntity do
         owner: "",
         components: %{
             transform: %TransformComponent{},
-            geometry: %{
-                type: "inline",
-                           #  bl                 # br                 #tl                    #tr
-                vertices: [[0.2, 0.8, -0.2],     [0.2, 0.8, 0.2],     [-0.2, 1.0, -0.2],     [-0.2, 1.0, 0.2]],
-                uvs:      [[0.0, 0.0],           [1.0, 0.0],          [0.0, 1.0],            [1.0, 1.0]],
-                triangles: [[0, 3, 1], [0, 2, 3]],
-                texture: "iVBORw0KGgoAAAANSUhEUgAAAEAAAABACAYAAACqaXHeAAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAJcEhZcwAADsQAAA7EAZUrDhsAAAM6SURBVHhe7Zq9b9NAGIdfJ2lSqlYCNtQVhGBkKOIPQOJjQEgMTBUDYkDqVDb+BqZuwFKpCxJiQRVCZWBKF9S1c4QQXfgKH21omuD3cm+4nBz7fL472z0/Uvq6kXr277n37MZxsLuzOQSPqfHqLZUAXr2lEsCrtxgVcOHSTfayhY3xjVwG6aCuPhkNtbUasBqOzWpWcPxGOFX9AX8jxNTYmQTIwUVIAqJ7sDj+qdkafDsYwOeV6/xdgI/dfVhaf8+2s4rQEiC2YVR4Ed1uoH2IwWXOrL3hW/oiUgm4dvshdDodtp0UXEZVhEpwmSwilAXEtbsqccsCx5+fCeDX4TBVeBESkUZCooA07a6KLEJn1uNII2KqABvBZUQRpsITqssiUoCJdo+Dgj9YvgWt5gysPX/JfjctAUkSMSEAg9Nlx0Z4DE7X85X7d/i7/3EhQpYwFuBq1qOCi6CEqGu/CaK6AY9qeLJVg+89e7OOJAWXcdUNTIDN4Avzc3Dv7g22nZbNrTZ82duDH+Hk2OoG4wIoOJJ21qdhoxusCNBtd1VMijAqwHZwEZTQrAfw90j/P0bEiAAb7a5K1m7ILMDlrMehK0JbQFGCi5AERFUECdC6JVak8EiW46luivJaenS7oOoAXr2lEsCrd1xZPM2qtwK2P31l1VsBq0tnWfVWwKPL51itToL4Q/xU5xtVB/DqLZUAXo8FC031c9n4fgB9QYAnwrKfDBu15OPH4BefvWXbmJ11AG6IIspKfzD9zla3dzie9Xb79TjvxBIgEWXthmkdgMHPP303MdFE5DmgrCL2+5MdgMHxFRWciD0J0h99eFwvhYgTjdExyus8jsQnRAjxgYmi3RQlNjZesW+VkaTghLIAoqgi6Na4anAitQARkpGnCPE7gbThkUwCEJQwG669g/AE5FIEBp8L9/sn3K9OcCKzAMJlN+i2exTGBBA2RZgMThgXgKCEVj2A3pGZZYHB6bkhk+ERKwII6gZEV4SNWRexKoDQWRa2gxNOBBAqIro/f8P6i9GHFtvhEacCEJRAj7jIIlzNuohzAYTYDXkEJ3ITgJCEPIITuQooAsfqnqAOlQBevcVzAQD/ACwg7buhFwAGAAAAAElFTkSuQmCC"
-            }
         }
 
     def init(store) do
         PlaceStore.add_entity(store, %PlaceEntity{})
-        PlaceStore.add_entity(store, %Entity{
-            id: "place-button",
-            components: %{
-                transform: %TransformComponent{
-                    matrix: Graphmath.Mat44.make_translate(0, 0.9, 0)
-                },
-                relationships: %RelationshipsComponent {
-                    parent: "place"
-                },
-                geometry: %{
-                    type: "inline",
-                               #  bl                 # br                 #tl                    #tr
-                    vertices: [[0.1, 0.0, -0.1],     [0.1, 0.0, 0.1],     [-0.1, 0.1, -0.1],     [-0.1, 0.1, 0.1]],
-                    uvs:      [[0.0, 0.0],           [1.0, 0.0],          [0.0, 1.0],            [1.0, 1.0]],
-                    triangles: [[0, 3, 1], [0, 2, 3]],
-                    texture: "iVBORw0KGgoAAAANSUhEUgAAAEAAAABACAIAAAAlC+aJAAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAJcEhZcwAADsMAAA7DAcdvqGQAAAD8SURBVGhD7c/LCcJgFERhq7Qgy3CfRXoQXItNGYmEeMyQbEbuhYFv9T9gzun6fPR1HofGAdP6xgHz+q4By/qWAev1/QKwftIpANNnbQKwe9EjAKPXGgRgMVQPwNxfpQOwddPRgMv99mcYqiTABkOVBNhgqJIAGwxVEmCDoUoCbDBUSYANhioJsMFQJQE2GKokwAZDlQTYYKiSABsMVRJgg6FKAmwwVEmADYYqCbDBUCUBNhiqJMAGQ5UE2GCokgAbDFUSYIOhytEAfKvjUAD+lLIfgA/V7ATgdUEyAO/K2g7Ao8o2AvCiOAbgur6vANy18AnAaSPvABx1Mg4vbr0dVP2tGoQAAAAASUVORK5CYII="
-                },
-                collider: %{
-                    type: "box",
-                    width: 0.2, height: 0.2, depth: 0.2
-                }
-            }
-        })
     end
 
     def handle_interaction(server_state,
