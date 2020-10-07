@@ -47,9 +47,9 @@ defmodule MmAllonet do
     :ok = GenServer.call(this, {:ccall, :stop, {}})
     GenServer.call(this, :stop)
   end
-  @doc "Gracefully disconnect all clients"
-  def disconnect(this, client_id) do
-    GenServer.call(this, {:ccall, :disconnect, {client_id}})
+  @doc "Gracefully disconnect a client"
+  def disconnect(this, client_id, reason_code) do
+    GenServer.call(this, {:ccall, :disconnect, {client_id, reason_code}})
   end
   @doc "Test that underlying allonet process is alive"
   def ping(this) do

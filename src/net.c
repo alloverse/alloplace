@@ -45,15 +45,17 @@ void handle_erl()
     
     if (strcmp(ERL_ATOM_PTR(command), "disconnect") == 0) {
         scoped_term ETERM* e_client_id = erl_element(1, args);
+        scoped_term ETERM* reason = erl_element(2, args);
         char agent_id[AGENT_ID_LENGTH+1] = {0};
         assert(ERL_BIN_SIZE(e_client_id) == AGENT_ID_LENGTH);
         memcpy(agent_id, ERL_BIN_PTR(e_client_id), ERL_BIN_SIZE(e_client_id));
+        int reason_code = ERL_INT_VALUE(reason);
 
         alloserver_client *client;
         LIST_FOREACH(client, &serv->clients, pointers)
         {
             if(strcmp(client->agent_id, agent_id) == 0) {
-                serv->disconnect(serv, client);
+                alloserv_disconnect(serv, client, reason_code);
                 scoped_comp ETERM *msg = erl_format("{response, ~w, ok}", reqId);
                 write_term(msg);
                 return;
@@ -63,7 +65,7 @@ void handle_erl()
         write_term(msg);
         return;
     } else if (strcmp(ERL_ATOM_PTR(command), "stop") == 0) {
-        serv->stop(serv, 1000);
+        alloserv_stop(serv);
         scoped_comp ETERM *msg = erl_format("{response, ~w, ok}", reqId);
         write_term(msg);
         return;

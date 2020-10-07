@@ -324,6 +324,14 @@ defmodule Server do
     )
   end
 
+  def disconnect_later(state, client, code) do
+    :ok = MmAllonet.disconnect(
+      state.mmallo,
+      client.id,
+      code
+    )
+  end
+
 
   ### Clients
   defp add_client(client_id,  state) do

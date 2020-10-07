@@ -21,7 +21,7 @@ defmodule PlaceEntity do
     def handle_interaction(server_state,
         client,
         %Interaction{
-            :body => ["announce", "version", 1, "identity", identity, "spawn_avatar", avatardesc]
+            :body => ["announce", "version", 2, "identity", identity, "spawn_avatar", avatardesc]
         } = interaction
     ) do
         Logger.info("Client announce for client #{client.id}: #{inspect(interaction)}")
@@ -45,6 +45,18 @@ defmodule PlaceEntity do
                 identity: identity
             } end )
         }}
+    end
+
+    def handle_interaction(server_state,
+        client,
+        %Interaction{
+            :body => ["announce", "version", old_version, "identity", identity, "spawn_avatar", avatardesc]
+        } = interaction
+    ) do
+        Logger.info("Client announce for client #{client.id}: using old version #{old_version}! Disconnecting.")
+        # 1003 = alloerror_outdated_version, comes from client.h
+        Server.disconnect_later(server_state, client, 1003)
+        {:ok, server_state}
     end
 
     def handle_interaction(server_state,
