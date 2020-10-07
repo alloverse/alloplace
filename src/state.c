@@ -7,11 +7,13 @@
 #include "erl_comm.h"
 #include "util.h"
 #include "allonet/src/util.h"
+#include "allonet/src/delta.h"
 
 
 ////////// STATE MANAGEMENT AND HANDLER FUNCTIONS
 
 allo_state state;
+statehistory_t history;
 
 static void add_entity(long reqId, cJSON *json, ei_x_buff *response)
 {
@@ -99,34 +101,32 @@ static void simulate(long reqId, double dt, cJSON *jintents, ei_x_buff *response
     ei_x_format_wo_ver(response, "{response, ~l, ok}", reqId);
 }
 
-static void get_snapshot(long reqId, ei_x_buff *response)
+static void get_snapshot_deltas(long reqId, long long revs[], int rev_count, ei_x_buff *response)
 {
     state.revision++;
+    // roll over revision to 0 before it reaches biggest consecutive integer representable in json
+    if(state.revision == 9007199254740990) { state.revision = 0; }
     
-    cJSON *jentities = cJSON_CreateObject();
-    allo_entity *entity = NULL;
-    LIST_FOREACH(entity, &state.entities, pointers)
-    {
-        cJSON *jentity = cjson_create_object("id", cJSON_CreateString(entity->id), NULL);
-        cJSON_AddItemReferenceToObject(jentity, "components", entity->components);
-        cJSON_AddItemToObject(jentities, entity->id, jentity);
-    }
+    cJSON *current = allo_state_to_json(&state);
+    allo_delta_insert(&history, current);
 
-    scopedj cJSON *jresponse = cjson_create_object(
-        "revision", cJSON_CreateNumber(state.revision),
-        "entities", jentities,
-        NULL
-    );
-    scoped char *jsons = cJSON_PrintUnformatted(jresponse);
-    
-    // Respond with  {response, ResponseId, {ok, JSON}} where JSON is a binary, which is not something
-    // we can express with ei_x_format.
+    // {response, ResponseId, {ok, [JSON, ...]}}
     ei_x_encode_tuple_header(response, 3);
     ei_x_encode_atom(response, "response");
     ei_x_encode_long(response, reqId);
     ei_x_encode_tuple_header(response, 2);
     ei_x_encode_atom(response, "ok");
-    ei_x_encode_binary(response, jsons, strlen(jsons));
+    ei_x_encode_list_header(response, rev_count);
+
+    for(int i = 0; i < rev_count; i++)
+    {
+        scoped char *jsons = allo_delta_compute(&history, revs[i]);
+        ei_x_encode_binary(response, jsons, strlen(jsons));
+    }
+    if(rev_count > 0)
+    {
+        ei_x_encode_empty_list(response);
+    }
 }
 
 static void get_owner_id(long reqId, const char *entity_id, ei_x_buff *response)
@@ -156,7 +156,7 @@ void handle_erl()
     int request_index = 0;
     if(!request)
         return;
-
+    
     int erlversion;
     int tupleCount;
     assert(ei_decode_version(request, &request_index, &erlversion) == 0);
@@ -204,9 +204,34 @@ void handle_erl()
         scopedj cJSON *json = ei_decode_cjson_string(request, &request_index);
         simulate(reqId, dt, json, &response);
     }
-    else if(strcmp(command, "get_snapshot") == 0)
+    else if(strcmp(command, "get_snapshot_deltas") == 0)
     {
-        get_snapshot(reqId, &response);
+        int rev_count;
+        assert(ei_decode_list_header(request, &request_index, &rev_count) == 0);
+        long long old_revs[rev_count];
+        // skip bullshit hack (list must contain integer >255 so we don't get a byte buffer)
+        assert(ei_decode_longlong(request, &request_index, old_revs) == 0);
+        rev_count--;
+        for(int i = 0; i < rev_count+1; i++) {
+            int type, size;
+            assert(ei_get_type(request, &request_index, &type, &size) == 0);
+            switch(type) {
+                case ERL_SMALL_INTEGER_EXT:
+                case ERL_INTEGER_EXT:
+                    assert(ei_decode_longlong(request, &request_index, old_revs+i) == 0);
+                    break;
+                case ERL_LIST_EXT:
+                case ERL_NIL_EXT:
+                    assert(ei_decode_list_header(request, &request_index, &size) == 0);
+                    assert(i == rev_count); //. list should end...
+                    assert(size == 0); // ... with an empty tail
+                    break;
+                default:
+                    assert(0 && "improper list");
+            }
+        }
+
+        get_snapshot_deltas(reqId, old_revs, rev_count, &response);
     }
     else if(strcmp(command, "get_owner_id") == 0)
     {

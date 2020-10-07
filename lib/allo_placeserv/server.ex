@@ -73,8 +73,9 @@ defmodule ClientIntent do
     xmovement: 0,
     yaw: 0,
     pitch: 0,
-    poses: %Poses{}
-    @type t :: %ClientIntent{entity_id: String.t(), zmovement: float, xmovement: float, yaw: float, pitch: float, poses: Poses.t()}
+    poses: %Poses{},
+    ack_state_rev: 0
+    @type t :: %ClientIntent{entity_id: String.t(), zmovement: float, xmovement: float, yaw: float, pitch: float, poses: Poses.t(), ack_state_rev: integer}
 end
 
 defmodule Interaction do
@@ -250,25 +251,27 @@ defmodule Server do
 
   def handle_timer(delta, state) do
     # 1. Simulate the world
-    intents = Enum.map(Map.values(state.clients), fn client -> client.intent end)
+    clients = Map.values(state.clients)
+    intents = Enum.map(clients, fn client -> client.intent end)
     :ok = PlaceStore.simulate(state.store, delta, intents)
 
     # 2. Broadcast new states
-    {:ok, snapshot} = PlaceStore.get_snapshot(state.store)
-    send_snapshot(state, snapshot)
+    old_revs = Enum.map(intents, fn intent -> intent.ack_state_rev end)
+    {:ok, deltas} = PlaceStore.get_snapshot_deltas(state.store, old_revs)
+    Enum.each(List.zip([clients, deltas]), fn({client, delta}) ->
+      send_delta(state, client, delta)
+    end)
     {:noreply, state}
   end
 
-  defp send_snapshot(state, snapshot) do
-    payload = snapshot <> "\n"
-    Enum.each(state.clients, fn({client_id, _client}) ->
-      MmAllonet.netsend(
-        state.mmallo,
-        client_id,
-        MmAllonet.channels.statediffs,
-        payload
-      )
-    end)
+  defp send_delta(state, client, delta)  do
+    payload = delta <> "\n"
+    MmAllonet.netsend(
+      state.mmallo,
+      client.id,
+      MmAllonet.channels.statediffs,
+      payload
+    )
   end
 
 

@@ -87,8 +87,9 @@ defmodule PlaceStore do
     GenServer.call(server, {:update_entity, entity_id, components, removecomps})
   end
 
-  def get_snapshot(server) do
-    GenServer.call(server, {:get_snapshot})
+  def get_snapshot_deltas(server, old_revs) do
+    # absolutely terrible hack to avoid ei giving us a bullshit string instead of a list
+    GenServer.call(server, {:get_snapshot_deltas, [-65536]++old_revs})
   end
 
   def get_owner_id(server, entity_id) do
