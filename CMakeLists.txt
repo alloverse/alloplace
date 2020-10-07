@@ -12,6 +12,7 @@ add_subdirectory("src/allonet")
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/priv)
 set(CMAKE_REQUIRED_INCLUDES ${ERLANG_EI_PATH}/src)
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${CMAKE_CURRENT_SOURCE_DIR})
+set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wno-deprecated-declarations")
 
 find_package(Erlang  REQUIRED)
 
