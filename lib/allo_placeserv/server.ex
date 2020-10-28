@@ -277,6 +277,14 @@ defmodule Server do
   end
 
   def handle_timer(delta, state) do
+
+    # 0. Update the clock
+    :ok = PlaceStore.update_entity(state.store,
+      "place",
+      %{ clock: %{time: server_time(state)}},
+      []
+    )
+
     # 1. Simulate the world
     clients = Map.values(state.clients)
     intents = Enum.map(clients, fn client -> client.intent end)
