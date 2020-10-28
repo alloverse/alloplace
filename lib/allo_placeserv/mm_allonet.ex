@@ -31,11 +31,13 @@ defmodule MmAllonet do
   @channel_commands 1
   @channel_assets 2
   @channel_media 3
+  @channel_clock 4
   def channels, do: %{
     statediffs: @channel_statediffs,
     commands: @channel_commands,
     assets: @channel_assets,
-    media: @channel_media
+    media: @channel_media,
+    clock: @channel_clock,
   }
 
   @doc "Send raw byte payload to client"
@@ -138,5 +140,14 @@ defmodule MmAllonet do
       state
     }
   end
+  defp parse_payload(client_id, @channel_clock, payload, state) do
+    packet = Poison.decode!(payload, as: %ClockPacket{}, keys: :atoms)
+    send(state.delegate, {:client_clock, client_id, packet})
+    {
+      :noreply,
+      state
+    }
+  end
+
 
 end

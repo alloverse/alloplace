@@ -4,7 +4,8 @@ defmodule ServerState do
     push_state_timer: nil,
     name: "Unnamed place",
     next_free_track: 1,
-    store: nil
+    store: nil,
+    start_time: 0.0
 
   @type t :: %ServerState{
     clients: %{required(String.t()) => ClientRef.t()},
@@ -117,6 +118,12 @@ defimpl Jason.Encoder, for: Interaction do
   end
 end
 
+defmodule ClockPacket do
+  @derive [Poison.Encoder]
+  defstruct client_time: 0.0,
+    server_time: 0.0
+end
+
 defmodule ClientIdentity do
   @derive Jason.Encoder
   defstruct display_name: nil
@@ -160,7 +167,8 @@ defmodule Server do
       %ServerState{initial_state|
         push_state_timer: tref,
         mmallo: mmallo,
-        store: store
+        store: store,
+        start_time: System.monotonic_time
       }
     }
   end
@@ -234,6 +242,25 @@ defmodule Server do
       end)
 
     {:noreply, state}
+  end
+
+  def handle_info({:client_clock, from_client_id, clock_packet}, state) do
+    out_packet = %ClockPacket{clock_packet|
+      server_time: server_time(state)
+    }
+    {:ok, json} = Poison.encode(out_packet)
+    payload = json <> "\n"
+    MmAllonet.netsend(
+      state.mmallo,
+      from_client_id,
+      MmAllonet.channels.clock,
+      payload
+    )
+    {:noreply, state}
+  end
+
+  defp server_time(state) do
+    System.convert_time_unit(System.monotonic_time - state.start_time, :native, :millisecond) / 1000.0
   end
 
   ### Intents
