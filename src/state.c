@@ -50,21 +50,9 @@ static void update_entity(long reqId, const char *entity_id, cJSON *comps, cJSON
     ei_x_format_wo_ver(response, "{response, ~l, ok}", reqId);
 }
 
-static void remove_entity_by_id(const char *entity_id)
+static void remove_entity_by_id(const char *entity_id, allo_removal_mode mode)
 {
-    allo_entity *entity = state.entities.lh_first;
-    while(entity)
-    {
-        allo_entity *to_delete = entity;
-        entity = entity->pointers.le_next;
-        if (strcmp(entity->id, entity_id) == 0)
-        {
-            printf("Removing entity %s for %s\n", to_delete->id, to_delete->owner_agent_id);
-            LIST_REMOVE(to_delete, pointers);
-            entity_destroy(to_delete);
-            break;
-        }
-    }
+    allo_state_remove_entity(&state, entity_id, mode);
 }
 
 static void remove_entity_by_owner(const char *owner_id)
@@ -190,7 +178,14 @@ void handle_erl()
     else if(strcmp(command, "remove_entity") == 0)
     {
         scoped char *entity_id = ei_decode_elixir_string(request, &request_index);
-        remove_entity_by_id(entity_id);
+        scoped char *modes = ei_decode_elixir_string(request, &request_index);
+        allo_removal_mode mode = AlloRemovalCascade;
+        if(modes && strcmp(modes, "reparent") == 0)
+        {
+            mode == AlloRemovalReparent;
+        }
+
+        remove_entity_by_id(entity_id, mode);
     }
     else if(strcmp(command, "remove_entities_owned_by") == 0)
     {

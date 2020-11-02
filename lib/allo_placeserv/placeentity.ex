@@ -79,6 +79,52 @@ defmodule PlaceEntity do
     def handle_interaction(server_state,
         client,
         %Interaction{
+            :body => ["spawn_entity", edesc]
+        } = interaction
+    ) do
+
+        entities = entities_for_desc(edesc, client.id, %RelationshipsComponent{})
+        true = Enum.all?(
+            Enum.map(entities, fn entity ->
+               PlaceStore.add_entity(server_state.store, entity)
+            end), fn result ->
+               result == :ok
+            end
+        )
+        root_entity = hd(entities)
+
+        response = Interaction.make_response(interaction, ["spawn_entity", root_entity.id])
+        Server.send_interaction(server_state, client.id, response)
+
+        {:ok, server_state}
+    end
+
+    def handle_interaction(server_state,
+        client,
+        %Interaction{
+            :body => ["remove_entity", eid, mode]
+        } = interaction
+    ) do
+        :ok = PlaceStore.remove_entity(server_state.store, eid, mode)
+        response = Interaction.make_response(interaction, ["remove_entity", "ok"])
+        Server.send_interaction(server_state, client.id, response)
+
+        {:ok, server_state}
+    end
+    def handle_interaction(server_state,
+        client,
+        %Interaction{
+            :body => ["remove_entity", eid]
+        } = interaction
+    ) do
+        handle_interaction(server_state, client, %Interaction{interaction|
+            :body => ["remove_entity", eid, "cascade"]
+        })
+    end
+
+    def handle_interaction(server_state,
+        client,
+        %Interaction{
             :body => ["allocate_track", media_type, sample_rate, channel_count, media_format]
         } = interaction
     ) do

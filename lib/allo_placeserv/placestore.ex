@@ -69,8 +69,8 @@ defmodule PlaceStore do
   def add_entity(server, ent) do
     GenServer.call(server, {:add_entity, ent})
   end
-  def remove_entity(server, entity_id) do
-    GenServer.cast(server, {:remove_entity, entity_id})
+  def remove_entity(server, entity_id, mode) do
+    GenServer.cast(server, {:remove_entity, entity_id, mode})
   end
   def remove_entities_owned_by(server, owner_id) do
     GenServer.cast(server, {:remove_entities_owned_by, owner_id})
