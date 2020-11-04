@@ -1,3 +1,6 @@
 [submodule "src/allonet"]
 	path = src/allonet
 	url = https://github.com/alloverse/allonet.git
+[submodule "alloapps/jukebox"]
+	path = alloapps/jukebox
+	url = https://github.com/alloverse/allo-jukebox.git
