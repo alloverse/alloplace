@@ -4,3 +4,6 @@
 [submodule "alloapps/jukebox"]
 	path = alloapps/jukebox
 	url = https://github.com/alloverse/allo-jukebox.git
+[submodule "alloapps/drawing-board"]
+	path = alloapps/drawing-board
+	url = https://github.com/alloverse/allo-whiteboard.git

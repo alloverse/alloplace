@@ -200,7 +200,7 @@ defmodule PlaceEntity do
         %Interaction{
             :body => ["launch_app", appname]
         } = interaction
-    ) when appname == "jukebox"
+    ) when appname == "jukebox" or appname == "drawing-board"
     do
         Logger.info("Launching app #{appname}")
 
