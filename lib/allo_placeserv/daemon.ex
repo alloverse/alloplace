@@ -1,5 +1,6 @@
 defmodule DaemonState do
   defstruct port: nil, # port()
+    name: "",
     next_request_id: 1, # int()
     outstanding_requests: %{} # int() -> pid()
 end
@@ -17,7 +18,8 @@ defmodule Daemon do
     Process.link port
 
     %DaemonState{
-      port: port
+      port: port,
+      name: path
     }
   end
 

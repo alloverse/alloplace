@@ -13,6 +13,9 @@ defmodule AlloPlaceserv.Application do
       {Server, name: AlloProcs.Serv},
     ]
 
+    #:debugger.start()
+    #:observer.start()
+
     opts = [strategy: :one_for_one, name: Supervisor]
     Supervisor.start_link(children, opts)
   end
