@@ -5,8 +5,8 @@
 #include <stdio.h>
 
 static uint8_t *g_buf; // buffer between call to handle async reading
-static uint16_t g_target_length; // how much to read from stream before done
-static uint16_t g_filled_length; // how much read so far
+static uint32_t g_target_length; // how much to read from stream before done
+static uint32_t g_filled_length; // how much read so far
 
 uint8_t* read_inner();
 int write_exact(uint8_t *buf, size_t len);
@@ -25,6 +25,7 @@ uint8_t* read_cmd()
 
 int write_cmd(uint8_t *buf, size_t len)
 {
+    assert(len < UINT32_MAX);
     uint8_t li[4];
     li[0] = (len >> 24) & 0xff;
     li[1] = (len >> 16) & 0xff;
@@ -52,7 +53,7 @@ uint8_t* read_inner()
 
 int write_exact(uint8_t *buf, size_t len)
 {
-  size_t i, wrote = 0;
+  int i, wrote = 0;
 
   do {
     if ((i = write(erlout, buf+wrote, len-wrote)) <= 0)
