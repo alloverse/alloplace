@@ -10,7 +10,7 @@ defmodule Daemon do
   def setup(path) do
     Process.flag(:trap_exit, true)
     port = Port.open({:spawn, path}, [
-      {:packet, 2},
+      {:packet, 4},
       :binary,
       :nouse_stdio
     ])

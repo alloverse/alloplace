@@ -9,4 +9,4 @@ uint8_t * read_cmd();
 
 // writes a full command to erlout, assuming it's a blocking fd.
 // returns < 0 on error.
-int write_cmd(uint8_t *buf, int len);
+int write_cmd(uint8_t *buf, size_t len);
