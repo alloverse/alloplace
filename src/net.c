@@ -149,7 +149,7 @@ int main()
     int retries = 3;
     while (!serv)
     {
-        serv = allo_listen(allo_udp_port);
+        serv = allo_listen(0, allo_udp_port);
         if(!serv) {
             fprintf(stderr, "Unable to open listen socket, ");
             if(retries-- > 0) {

@@ -96,8 +96,8 @@ defmodule PlaceStore do
     GenServer.call(server, {:get_owner_id, entity_id})
   end
 
-  def simulate(server, dt, intents) do
-    GenServer.call(server, {:simulate, dt, intents})
+  def simulate(server, intents) do
+    GenServer.call(server, {:simulate, intents})
   end
 
   def ping(this) do

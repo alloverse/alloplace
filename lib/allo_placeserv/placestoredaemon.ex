@@ -32,7 +32,7 @@ defmodule PlaceStoreDaemon do
         {:ok, cjson} <- Jason.encode(comps),
         {:ok, rmjson} <- Jason.encode(rmcomps),
         do: {eid, cjson, rmjson})
-      {:simulate, dt, intents} -> with {:ok, json} <- Poison.encode(intents), do: {dt, json}
+      {:simulate, intents} -> with {:ok, json} <- Poison.encode(intents), do: {json}
       _ -> Tuple.delete_at(ccall, 0)
     end
     {:ok, dstate} = Daemon.call_to_c(cmd, args, from, state)
