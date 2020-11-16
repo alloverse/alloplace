@@ -220,29 +220,7 @@ defmodule Server do
     {:noreply, state}
   end
 
-  def handle_info({:client_media, from_client_id, incoming_payload}, state) do
-    # incoming message is track id as 32bit big endian integer, followed by media payload
-    #<<track_id :: unsigned-big-integer-size(32), media_packet, zero :: integer-size(8)>> = incoming_payload
-
-    # todo: lookup a LiveMediaComponent with a matching track ID and
-    # assert that from_client_id owns that entity.
-
-    # outgoing payload is same format as outgoing, so we just mirror it out to all clients
-    outgoing_payload = incoming_payload
-
-    state.clients |>
-      Enum.filter(fn({_client_id, client}) -> client.id != from_client_id end) |>
-      Enum.each(fn({client_id, _client}) ->
-        MmAllonet.netsend(
-          state.mmallo,
-          client_id,
-          MmAllonet.channels.media,
-          outgoing_payload
-        )
-      end)
-
-    {:noreply, state}
-  end
+  # handling of client_media has been moved to server.c to see if that fixes performance.
 
   def handle_info({:client_clock, from_client_id, clock_packet}, state) do
     out_packet = %ClockPacket{clock_packet|
