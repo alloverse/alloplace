@@ -15,8 +15,9 @@ uint8_t* read_cmd()
 {
     if(!g_target_length) {
         uint8_t lenbuf[4];
-        if (read(erlin, lenbuf, 4) != 4)
-            assert(0 && "gotta be able to read full packet size");
+        int bytes_read = read(erlin, lenbuf, 4);
+        if(bytes_read != 4) { fprintf(stderr, "couldn't read packet size: only got %d bytes, expected 4\n", bytes_read); }
+        assert(bytes_read == 4 && "gotta be able to read full packet size");
         g_target_length = (lenbuf[0] << 24) | (lenbuf[1] << 16) | (lenbuf[2] << 8) | lenbuf[3];
         g_buf = malloc(g_target_length);
     }
