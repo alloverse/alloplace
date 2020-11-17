@@ -12,6 +12,9 @@ defmodule PlaceEntity do
         owner: "",
         components: %{
             transform: %TransformComponent{},
+        },
+        clock: %{
+            time: 0.0
         }
 
     def init(store) do

@@ -71,7 +71,7 @@ static void remove_entity_by_owner(const char *owner_id)
     }
 }
 
-static void simulate(long reqId, cJSON *jintents, ei_x_buff *response)
+static void simulate(long reqId, cJSON *jintents, ei_x_buff *response, double server_time)
 {
     int intent_count = cJSON_GetArraySize(jintents);
     allo_client_intent *intents[intent_count];
@@ -80,7 +80,7 @@ static void simulate(long reqId, cJSON *jintents, ei_x_buff *response)
         cJSON *jintent = cJSON_GetArrayItem(jintents, i);
         intents[i] = allo_client_intent_parse_cjson(jintent);
     }
-    allo_simulate(&state, intents, intent_count, get_ts_monod());
+    allo_simulate(&state, intents, intent_count, server_time);
     for(int i = 0; i < intent_count; i++)
     {
         allo_client_intent_free(intents[i]);
@@ -195,7 +195,9 @@ void handle_erl()
     else if(strcmp(command, "simulate") == 0)
     {
         scopedj cJSON *json = ei_decode_cjson_string(request, &request_index);
-        simulate(reqId, json, &response);
+        double server_time;
+        assert(ei_decode_double(request, &request_index, &server_time) == 0);
+        simulate(reqId, json, &response, server_time);
     }
     else if(strcmp(command, "get_snapshot_deltas") == 0)
     {
