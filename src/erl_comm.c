@@ -64,3 +64,26 @@ int write_exact(uint8_t *buf, size_t len)
 
   return len;
 }
+
+
+#include <execinfo.h>
+#include <signal.h>
+static char g_process_name[255];
+static void crash_handler(int sig) {
+  void *array[255];
+  size_t size;
+
+  // get void*'s for all entries on the stack
+  size = backtrace(array, 255);
+
+  // print out all the frames to stderr
+  fprintf(stderr, "%s crashed: signal %d:\n", g_process_name, sig);
+  backtrace_symbols_fd(array, size, STDERR_FILENO);
+  exit(1);
+}
+
+void install_crash_handler(const char *process_name)
+{
+  snprintf(g_process_name, 255, "%s", process_name);
+  signal(SIGSEGV, crash_handler);
+}

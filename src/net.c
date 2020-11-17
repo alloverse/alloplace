@@ -140,6 +140,7 @@ void client_sent(alloserver *serv, alloserver_client *client, allochannel channe
 
 int main()
 {
+    install_crash_handler("AlloNetPort");
     if(!allo_initialize(false)) 
     {
         fprintf(stderr, "Unable to initialize allonet");

@@ -252,6 +252,8 @@ void handle_erl()
 
 int main()
 {
+    install_crash_handler("AlloStatePort");
+
     if(!allo_initialize(false))
     {
         fprintf(stderr, "Unable to initialize allostate");
