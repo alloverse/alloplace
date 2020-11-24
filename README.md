@@ -29,4 +29,4 @@ then...
 ### Docker
 
 * `docker build -t alloplace .`
-* `docker run p 21337:21337 -it alloplace`
+* `ALLOPLACE_NAME="lol" docker run -p 21337:21337/udp -it alloplace`
