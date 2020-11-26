@@ -24,7 +24,7 @@ defmodule PlaceEntity do
     def handle_interaction(server_state,
         client,
         %Interaction{
-            :body => ["announce", "version", 2, "identity", identity, "spawn_avatar", avatardesc]
+            :body => ["announce", "version", 3, "identity", identity, "spawn_avatar", avatardesc]
         } = interaction
     ) do
         Logger.info("Client announce for client #{client.id}: #{inspect(interaction)}")

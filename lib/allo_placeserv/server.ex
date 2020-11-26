@@ -227,7 +227,7 @@ defmodule Server do
       server_time: server_time(state)
     }
     {:ok, json} = Poison.encode(out_packet)
-    payload = json <> "\n"
+    payload = json
     MmAllonet.netsend(
       state.mmallo,
       from_client_id,
@@ -270,7 +270,7 @@ defmodule Server do
   end
 
   defp send_delta(state, client, delta)  do
-    payload = delta <> "\n"
+    payload = delta
     MmAllonet.netsend(
       state.mmallo,
       client.id,
@@ -320,7 +320,7 @@ defmodule Server do
   # send to specific client, if you already know which client owns an entity
   def send_interaction(state, dest_client_id, interaction) do
     {:ok, json} = Jason.encode(interaction)
-    payload = json <> "\n"
+    payload = json
     :ok = MmAllonet.netsend(
       state.mmallo,
       dest_client_id,
