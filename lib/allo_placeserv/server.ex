@@ -59,6 +59,7 @@ defmodule Poses do
     %{
       :__struct__ => __MODULE__,
       :head => %Pose{},
+      :torso => %Pose{},
       :"hand/left" => %Pose{},
       :"hand/right" => %Pose{}
     }
