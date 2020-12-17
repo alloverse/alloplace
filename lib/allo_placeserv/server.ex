@@ -322,12 +322,18 @@ defmodule Server do
   def send_interaction(state, dest_client_id, interaction) do
     {:ok, json} = Jason.encode(interaction)
     payload = json
-    :ok = MmAllonet.netsend(
+    case MmAllonet.netsend(
       state.mmallo,
       dest_client_id,
       MmAllonet.channels.commands,
       payload
-    )
+    ) do
+      :ok ->
+        :ok
+      {:error, error} ->
+        Logger.error("Failed sending interaction #{inspect(interaction)} to #{dest_client_id}: #{error}")
+        {:error, error}
+    end
   end
 
   def disconnect_later(state, client, code) do
