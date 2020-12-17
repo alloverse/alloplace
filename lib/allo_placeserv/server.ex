@@ -10,7 +10,7 @@ defmodule ServerState do
   @type t :: %ServerState{
     clients: %{required(String.t()) => ClientRef.t()},
     mmallo: pid(),
-    push_state_timer: TRef,
+    push_state_timer: reference(),
     name: String.t(),
     next_free_track: Integer.t()
   }
@@ -154,7 +154,7 @@ defmodule Server do
     {:ok, store} = PlaceStoreDaemon.start_link([])
 
     # update state and send world state @ 20hz
-    {:ok, tref} = :timer.send_interval(Kernel.trunc(1000/20), self(), {:timer, 1.0/20.0})
+    tref = Process.send_after(self(), :timer, div(1000, 20))
 
     reply = MmAllonet.ping(mmallo)
     Logger.info("net replies? #{reply}")
@@ -185,8 +185,8 @@ defmodule Server do
   def handle_info({:client_intent, client_id, intent_packet}, state) do
     handle_client_intent(client_id, intent_packet, state)
   end
-  def handle_info({:timer, delta}, state) do
-    handle_timer(delta, state)
+  def handle_info(:timer, state) do
+    handle_timer(state)
   end
 
   def handle_info({:client_interaction, from_client_id, interaction_packet}, state) do
@@ -255,7 +255,7 @@ defmodule Server do
     }
   end
 
-  def handle_timer(_, state) do
+  def handle_timer(state) do
     # 1. Simulate the world
     clients = Map.values(state.clients)
     intents = Enum.map(clients, fn client -> client.intent end)
@@ -267,7 +267,12 @@ defmodule Server do
     Enum.each(List.zip([clients, deltas]), fn({client, delta}) ->
       send_delta(state, client, delta)
     end)
-    {:noreply, state}
+
+    # 3. Schedule the next send
+    tref = Process.send_after(self(), :timer, div(1000, 20))
+    {:noreply, %ServerState{state|
+      push_state_timer: tref
+      }}
   end
 
   defp send_delta(state, client, delta)  do
