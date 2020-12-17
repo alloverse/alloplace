@@ -10,7 +10,10 @@ things.
 then...
 
 ### macOS
-* `brew install elixir cmake`
+* `brew install asdf` version manager for a bunch or languages. See https://asdf-vm.com/#/core-manage-asdf for more setup instructions
+* `asdf install erlang 22.3`
+* `asdf install elixir 1.9`
+* `export CPATH=~/.asdf/installs/erlang/22.3//usr/include` for erlang headers
 * `mix deps.get`
 
 ### Ubuntu (including Ubuntu-on-Windows)
