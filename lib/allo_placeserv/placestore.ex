@@ -4,53 +4,6 @@ defmodule StoreState do
   revision: 0
 end
 
-# Todo: schema for component that generates these in elixir and c and c#...
-
-defmodule TransformComponent do
-  defstruct matrix: Graphmath.Mat44.identity()
-end
-defimpl Jason.Encoder, for: TransformComponent do
-  def encode(struct, opts) do
-    Jason.Encode.map(%{
-      matrix: Tuple.to_list(
-        struct.matrix
-      )
-    }, opts)
-  end
-end
-
-defmodule RelationshipsComponent do
-  @derive Jason.Encoder
-  defstruct parent: nil
-end
-
-defmodule IntentComponent do
-  @derive Jason.Encoder
-  defstruct actuate_pose: nil
-end
-
-defmodule LiveMediaComponent do
-  @derive Jason.Encoder
-  defstruct type: "audio",
-    track_id: 0,
-    sample_rate: 48000,
-    channel_count: 1,
-    format: "opus"
-end
-
-defmodule Entity do
-  @enforce_keys [:id]
-  @derive {Jason.Encoder, only: [:id, :components, :owner] }
-  defstruct id: "",
-    components: %{
-      transform: %TransformComponent{},
-      relationships: %RelationshipsComponent{},
-      intent: %IntentComponent{},
-      live_media: %LiveMediaComponent{}
-    },
-    owner: "" # client_id
-end
-
 defmodule PlaceStore do
   use GenServer
   require Logger
