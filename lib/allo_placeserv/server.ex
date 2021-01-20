@@ -36,13 +36,13 @@ defmodule Server do
 
   def init(initial_state) do
     Logger.info("Starting Alloverse Place server '#{initial_state.name}'")
-    {:ok, mmallo} = MmAllonet.start_link([], self(), 31337)
+    {:ok, mmallo} = NetDaemon.start_link([], self(), 31337)
     {:ok, store} = PlaceStoreDaemon.start_link([])
 
     # update state and send world state @ 20hz
     tref = Process.send_after(self(), :timer, div(1000, 20))
 
-    reply = MmAllonet.ping(mmallo)
+    reply = NetDaemon.ping(mmallo)
     Logger.info("net replies? #{reply}")
 
     reply = PlaceStore.ping(store)
@@ -115,10 +115,10 @@ defmodule Server do
     }
     {:ok, json} = Poison.encode(out_packet)
     payload = json
-    MmAllonet.netsend(
+    NetDaemon.netsend(
       state.mmallo,
       from_client_id,
-      MmAllonet.channels.clock,
+      NetDaemon.channels.clock,
       payload
     )
     {:noreply, state}
@@ -163,10 +163,10 @@ defmodule Server do
 
   defp send_delta(state, client, delta)  do
     payload = delta
-    MmAllonet.netsend(
+    NetDaemon.netsend(
       state.mmallo,
       client.id,
-      MmAllonet.channels.statediffs,
+      NetDaemon.channels.statediffs,
       payload
     )
   end
@@ -213,10 +213,10 @@ defmodule Server do
   def send_interaction(state, dest_client_id, interaction) do
     {:ok, json} = Jason.encode(interaction)
     payload = json
-    case MmAllonet.netsend(
+    case NetDaemon.netsend(
       state.mmallo,
       dest_client_id,
-      MmAllonet.channels.commands,
+      NetDaemon.channels.commands,
       payload
     ) do
       :ok ->
@@ -228,7 +228,7 @@ defmodule Server do
   end
 
   def disconnect_later(state, client, code) do
-    :ok = MmAllonet.disconnect(
+    :ok = NetDaemon.disconnect(
       state.mmallo,
       client.id,
       code

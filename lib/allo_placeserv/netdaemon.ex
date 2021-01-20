@@ -10,7 +10,7 @@ defmodule ClientIntentPacket do
       intent: %ClientIntent{}
 end
 
-defmodule MmAllonet do
+defmodule NetDaemon do
   use GenServer
   require Logger
 
