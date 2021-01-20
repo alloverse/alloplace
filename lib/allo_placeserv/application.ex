@@ -1,6 +1,3 @@
-defmodule AlloProcs do
-end
-
 defmodule AlloPlaceserv.Application do
   @moduledoc """
   Main supervisor and stuff
@@ -9,8 +6,10 @@ defmodule AlloPlaceserv.Application do
 
   def start(_type, _args) do
     children = [
-      {Task.Supervisor, name: AlloProcs.TaskSupervisor},
-      {Server, name: AlloProcs.Serv},
+      %{
+        id: Serv,
+        start: {Server, :start_link, [[]]}
+      },
     ]
 
     #:debugger.start()

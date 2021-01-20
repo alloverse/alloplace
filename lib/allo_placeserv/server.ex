@@ -42,12 +42,6 @@ defmodule Server do
     # update state and send world state @ 20hz
     tref = Process.send_after(self(), :timer, div(1000, 20))
 
-    reply = NetDaemon.ping(mmallo)
-    Logger.info("net replies? #{reply}")
-
-    reply = PlaceStore.ping(store)
-    Logger.info("state replies? #{reply}")
-
     :ok = PlaceEntity.init(store)
 
     { :ok,

@@ -15,10 +15,12 @@ defmodule NetDaemon do
   require Logger
 
   def start_link(opts, delegate, udpport) do
-    GenServer.start_link(__MODULE__, %AllonetState{
+    {:ok, pid} = GenServer.start_link(__MODULE__, %AllonetState{
       delegate: delegate,
       udpport: udpport
     }, opts)
+    :netpong = NetDaemon.ping(pid)
+    {:ok, pid}
   end
 
   def init(initial_state) do

@@ -5,7 +5,9 @@ defmodule PlaceStoreDaemon do
   ### Public API
 
   def start_link(opts) do
-    GenServer.start_link(__MODULE__, {}, opts)
+    {:ok, pid} = GenServer.start_link(__MODULE__, {}, opts)
+    :statepong = PlaceStore.ping(pid)
+    {:ok, pid}
   end
 
   def init(_) do
