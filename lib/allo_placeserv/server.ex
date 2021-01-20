@@ -1,15 +1,14 @@
 defmodule ServerState do
   defstruct clients: %{}, # from client_id to ClientRef
-    mmallo: nil,
     push_state_timer: nil,
     name: "Unnamed place",
     next_free_track: 1,
+    start_time: 0.0,
     store: nil,
-    start_time: 0.0
+    mmallo: nil
 
   @type t :: %ServerState{
     clients: %{required(String.t()) => ClientRef.t()},
-    mmallo: pid(),
     push_state_timer: reference(),
     name: String.t(),
     next_free_track: Integer.t()
@@ -34,31 +33,29 @@ defmodule Server do
   use GenServer
   require Logger
 
-  def init(initial_state) do
-    Logger.info("Starting Alloverse Place server '#{initial_state.name}'")
-    {:ok, mmallo} = NetDaemon.start_link([], self(), 31337)
-    {:ok, store} = PlaceStoreDaemon.start_link([])
-
-    # update state and send world state @ 20hz
-    tref = Process.send_after(self(), :timer, div(1000, 20))
-
-    :ok = PlaceEntity.init(store)
-
-    { :ok,
-      %ServerState{initial_state|
-        push_state_timer: tref,
-        mmallo: mmallo,
-        store: store,
-        start_time: System.monotonic_time
-      }
-    }
-  end
-
   def start_link(opts) do
     name = System.get_env("ALLOPLACE_NAME", "Unnamed place")
     GenServer.start_link(__MODULE__, %ServerState{
       name: name
     }, opts)
+  end
+
+  def init(initial_state) do
+    Logger.info("Starting Alloverse Place server '#{initial_state.name}'")
+
+    # update state and send world state @ 20hz
+    tref = Process.send_after(self(), :timer, div(1000, 20))
+
+    :ok = PlaceEntity.init(StateProc)
+
+    { :ok,
+      %ServerState{initial_state|
+        push_state_timer: tref,
+        mmallo: NetProc,
+        store: StateProc,
+        start_time: System.monotonic_time
+      }
+    }
   end
 
   ### GenServer

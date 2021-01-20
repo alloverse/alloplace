@@ -6,10 +6,9 @@ defmodule AlloPlaceserv.Application do
 
   def start(_type, _args) do
     children = [
-      %{
-        id: Serv,
-        start: {Server, :start_link, [[]]}
-      },
+      {PlaceStoreDaemon, [name: StateProc]},
+      {Server, [name: ServProc]},
+      {NetDaemon, [name: NetProc, delegate: ServProc, port: 31337]},
     ]
 
     #:debugger.start()
