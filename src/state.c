@@ -135,6 +135,32 @@ static void get_owner_id(long reqId, const char *entity_id, ei_x_buff *response)
     ei_x_encode_binary(response, entity->owner_agent_id, strlen(entity->owner_agent_id));
 }
 
+static void save_state(long reqId, ei_x_buff *response)
+{
+    cJSON *latest = statehistory_get(&history, history.latest_revision);
+    if(latest)
+    {
+        const char *data = cJSON_PrintUnformatted(latest);
+        if(data) {
+            FILE *f = fopen("state.json", "w");
+            fwrite(data, 1, strlen(data), f);
+            fclose(f);
+        }
+    }
+
+    ei_x_format_wo_ver(response, "{response, ~l, ok}", reqId);
+}
+
+static void load_state(long reqId, ei_x_buff *response)
+{
+    ei_x_format_wo_ver(response, "{response, ~l, ok}", reqId);
+}
+
+static void clear_state(long reqId, ei_x_buff *response)
+{
+    ei_x_format_wo_ver(response, "{response, ~l, ok}", reqId);
+}
+
 
 ///////// COMMS MANAGEMENT
  
@@ -233,6 +259,18 @@ void handle_erl()
         assert(argsLen == 1);
         scoped char *owner_id = ei_decode_elixir_string(request, &request_index);
         get_owner_id(reqId, owner_id, &response);
+    }
+    else if(strcmp(command, "save_state") == 0)
+    {
+        save_state(reqId, &response);
+    }
+    else if(strcmp(command, "load_state") == 0)
+    {
+        load_state(reqId, &response);
+    }
+    else if(strcmp(command, "clear_state") == 0)
+    {
+        clear_state(reqId, &response);
     }
     else
     {

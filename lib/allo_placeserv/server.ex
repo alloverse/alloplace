@@ -145,6 +145,9 @@ defmodule Server do
   end
 
   def handle_timer(state) do
+    # 0. Save the world in case of a crash
+    PlaceStore.save_state(state.store)
+
     # 1. Simulate the world
     clients = Map.values(state.clients)
     intents = Enum.map(clients, fn client -> client.intent end)
