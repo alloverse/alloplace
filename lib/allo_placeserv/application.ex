@@ -7,6 +7,7 @@ defmodule AlloPlaceserv.Application do
   def start(_type, _args) do
     children = [
       {PlaceStoreDaemon, [name: StateProc]},
+      {StateBackupper, [name: BackupProc]},
       {Server, [name: ServProc]},
       {NetDaemon, [name: NetProc, delegate: ServProc, port: 31337]},
     ]

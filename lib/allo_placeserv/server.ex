@@ -40,22 +40,34 @@ defmodule Server do
     }, opts)
   end
 
-  def init(initial_state) do
-    Logger.info("Starting Alloverse Place server '#{initial_state.name}'")
+  def init(default_state) do
 
-    # update state and send world state @ 20hz
-    tref = Process.send_after(self(), :timer, div(1000, 20))
-
-    :ok = PlaceEntity.init(StateProc)
+    # restore state if possible, otherwise initialize start state
+    state = case StateBackupper.get(BackupProc) do
+      {} ->
+        Logger.info("Starting Alloverse Place server '#{default_state.name}'")
+        %ServerState{default_state|
+          start_time: System.monotonic_time
+        }
+      restored_state  ->
+        Logger.info("Restoring Alloverse Place server '#{default_state.name}'")
+        restored_state
+    end
 
     { :ok,
-      %ServerState{initial_state|
-        push_state_timer: tref,
+      %ServerState{state|
+        # update state and send world state @ 20hz
+        push_state_timer: Process.send_after(self(), :timer, div(1000, 20)),
         mmallo: NetProc,
         store: StateProc,
-        start_time: System.monotonic_time
       }
     }
+  end
+
+  def terminate reason, state do
+    Logger.warn("Server crashed, reason: #{inspect(reason)}. Saving state: #{inspect(state)}")
+    StateBackupper.set(BackupProc, state)
+    {:shutdown, state}
   end
 
   ### GenServer
