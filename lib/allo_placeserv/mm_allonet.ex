@@ -148,6 +148,9 @@ defmodule MmAllonet do
       state
     }
   end
+  defp parse_payload(client_id, @channel_assets, payload, state) do
+    # Channel is disabled in server.c
+  end
 
 
 end
