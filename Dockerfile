@@ -7,7 +7,7 @@ RUN apt-get update && apt-get install -y build-essential \
     clang-3.8 \
     git \
     libgme-dev \
-    libcairo2 \
+    libcairo2 libpoppler-glib-dev \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
 
