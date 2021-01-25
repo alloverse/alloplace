@@ -20,6 +20,7 @@ ADD . /app/
 RUN cd alloapps/jukebox; ./allo/assist fetch
 RUN cd alloapps/drawing-board; ./allo/assist fetch
 RUN cd alloapps/clock; ./allo/assist fetch
+RUN cd alloapps/fileviewer; ./allo/assist fetch
 
 RUN mix local.hex --force
 

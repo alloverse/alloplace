@@ -10,3 +10,6 @@
 [submodule "alloapps/clock"]
 	path = alloapps/clock
 	url = https://github.com/alloverse/allo-clock.git
+[submodule "alloapps/fileviewer"]
+	path = alloapps/fileviewer
+	url = https://github.com/alloverse/allo-fileviewer
