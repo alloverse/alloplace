@@ -7,3 +7,6 @@
 [submodule "alloapps/drawing-board"]
 	path = alloapps/drawing-board
 	url = https://github.com/alloverse/allo-whiteboard.git
+[submodule "alloapps/clock"]
+	path = alloapps/clock
+	url = https://github.com/alloverse/allo-clock.git
