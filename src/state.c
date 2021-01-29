@@ -12,7 +12,7 @@
 
 ////////// STATE MANAGEMENT AND HANDLER FUNCTIONS
 
-allo_state state;
+allo_state *state;
 statehistory_t history;
 
 static void add_entity(long reqId, cJSON *json, ei_x_buff *response)
@@ -25,14 +25,14 @@ static void add_entity(long reqId, cJSON *json, ei_x_buff *response)
     ent->owner_agent_id = allo_strdup(owner_id);
     cJSON *components = cJSON_DetachItemFromObject(json, "components");
     ent->components = components;
-    LIST_INSERT_HEAD(&state.entities, ent, pointers);
+    LIST_INSERT_HEAD(&state->entities, ent, pointers);
 
     ei_x_format_wo_ver(response, "{response, ~l, ok}", reqId);
 }
 
 static void update_entity(long reqId, const char *entity_id, cJSON *comps, cJSON *rmcomps, ei_x_buff *response)
 {
-    allo_entity *entity = state_get_entity(&state, entity_id);
+    allo_entity *entity = state_get_entity(state, entity_id);
     cJSON *comp = NULL;
     for(cJSON *comp = comps->child; comp != NULL;)
     {
@@ -52,12 +52,12 @@ static void update_entity(long reqId, const char *entity_id, cJSON *comps, cJSON
 
 static void remove_entity_by_id(const char *entity_id, allo_removal_mode mode)
 {
-    allo_state_remove_entity(&state, entity_id, mode);
+    allo_state_remove_entity(state, entity_id, mode);
 }
 
 static void remove_entity_by_owner(const char *owner_id)
 {
-    allo_entity *entity = state.entities.lh_first;
+    allo_entity *entity = state->entities.lh_first;
     while(entity)
     {
         allo_entity *to_delete = entity;
@@ -80,7 +80,7 @@ static void simulate(long reqId, cJSON *jintents, ei_x_buff *response, double se
         cJSON *jintent = cJSON_GetArrayItem(jintents, i);
         intents[i] = allo_client_intent_parse_cjson(jintent);
     }
-    allo_simulate(&state, intents, intent_count, server_time);
+    allo_simulate(state, intents, intent_count, server_time);
     for(int i = 0; i < intent_count; i++)
     {
         allo_client_intent_free(intents[i]);
@@ -91,11 +91,11 @@ static void simulate(long reqId, cJSON *jintents, ei_x_buff *response, double se
 
 static void get_snapshot_deltas(long reqId, long long revs[], int rev_count, ei_x_buff *response)
 {
-    state.revision++;
+    state->revision++;
     // roll over revision to 0 before it reaches biggest consecutive integer representable in json
-    if(state.revision == 9007199254740990) { state.revision = 0; }
+    if(state->revision == 9007199254740990) { state->revision = 0; }
     
-    cJSON *current = allo_state_to_json(&state);
+    cJSON *current = allo_state_to_json(state, false);
     allo_delta_insert(&history, current);
 
     // {response, ResponseId, {ok, [JSON, ...]}}
@@ -119,7 +119,7 @@ static void get_snapshot_deltas(long reqId, long long revs[], int rev_count, ei_
 
 static void get_owner_id(long reqId, const char *entity_id, ei_x_buff *response)
 {
-    allo_entity *entity = state_get_entity(&state, entity_id);
+    allo_entity *entity = state_get_entity(state, entity_id);
     if (!entity)
     {
         ei_x_format_wo_ver(response, "{response, ~l, {error, no_such_entity}}", reqId);
@@ -135,17 +135,17 @@ static void get_owner_id(long reqId, const char *entity_id, ei_x_buff *response)
     ei_x_encode_binary(response, entity->owner_agent_id, strlen(entity->owner_agent_id));
 }
 
+static const char *state_file_path = "storage/state.json";
+
 static void save_state(long reqId, ei_x_buff *response)
 {
-    cJSON *latest = statehistory_get(&history, history.latest_revision);
-    if(latest)
-    {
-        const char *data = cJSON_PrintUnformatted(latest);
-        if(data) {
-            FILE *f = fopen("state.json", "w");
-            fwrite(data, 1, strlen(data), f);
-            fclose(f);
-        }
+    cJSON *latest = allo_state_to_json(state, true);
+    const char *data = cJSON_PrintUnformatted(latest);
+    cJSON_Delete(latest);
+    if(data) {
+        FILE *f = fopen(state_file_path, "w");
+        fwrite(data, 1, strlen(data), f);
+        fclose(f);
     }
 
     ei_x_format_wo_ver(response, "{response, ~l, ok}", reqId);
@@ -153,7 +153,39 @@ static void save_state(long reqId, ei_x_buff *response)
 
 static void load_state(long reqId, ei_x_buff *response)
 {
+    FILE *f = fopen(state_file_path, "r");
+    const char *reason = "";
+    #define failIf(x, r) if(x) { reason = r; goto error; }
+    failIf(!f, "no such file");
+
+    fseek(f, 0, SEEK_END);
+    size_t len = ftell(f);
+    fseek(f, 0, SEEK_SET);
+
+    char *jsons = malloc(len);
+    fread(jsons, 1, len, f);
+    fclose(f);
+
+    cJSON *json = cJSON_Parse(jsons);
+    free(jsons);
+    failIf(!json, "failed to parse json");
+
+    allo_state *loaded = allo_state_from_json(json);
+    failIf(!f, "failed to load state");
+    
+    loaded->revision = MAX(loaded->revision, state->revision) + 1;
+
+    allo_state_destroy(state);
+    free(state);
+    state = loaded;
+    allo_delta_clear(&history);
+
     ei_x_format_wo_ver(response, "{response, ~l, ok}", reqId);
+    return;
+
+error:
+    ei_x_format_wo_ver(response, "{response, ~l, {error, ~s}}", reqId, reason);
+    return;
 }
 
 static void clear_state(long reqId, ei_x_buff *response)
@@ -305,6 +337,9 @@ int main()
         perror("failed to set erlin as non-blocking");
         return -4;
     }
+
+    state = calloc(1, sizeof(allo_state));
+    allo_state_init(state);
     
     printf("allostateport open as %d\n", getpid());
     

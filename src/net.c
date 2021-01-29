@@ -6,11 +6,6 @@
 #include <sys/fcntl.h>
 #include <assert.h>
 
- #define MAX(a,b) \
-   ({ __typeof__ (a) _a = (a); \
-       __typeof__ (b) _b = (b); \
-     _a > _b ? _a : _b; })
-
 void erl_free_term_handle(ETERM **term) { erl_free_term(*term); }
 void erl_free_compound_handle(ETERM **term) { erl_free_compound(*term); }
 #define scoped_term __attribute__ ((__cleanup__(erl_free_term_handle)))

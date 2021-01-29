@@ -42,6 +42,14 @@ defmodule PlaceStore do
     GenServer.call(this, {:save_state, {}})
   end
 
+  def load_state(this) do
+    GenServer.call(this, {:load_state, {}})
+  end
+
+  def clear_state(this) do
+    GenServer.call(this, {:clear_state, {}})
+  end
+
 end
 
 
@@ -55,6 +63,8 @@ defmodule PlaceStoreDaemon do
     {:ok, pid} = GenServer.start_link(__MODULE__, {}, opts)
     :statepong = PlaceStore.ping(pid)
     :ok = PlaceEntity.init(pid)
+    load_status = PlaceStore.load_state(pid)
+    Logger.info("Status of loading state from disk: #{inspect(load_status)}")
     {:ok, pid}
   end
 

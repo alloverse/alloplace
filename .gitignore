@@ -30,4 +30,4 @@ priv
 .elixir_ls
 .vscode
 
-state.json
+storage
