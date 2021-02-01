@@ -10,15 +10,17 @@ defmodule ClientIntentPacket do
       intent: %ClientIntent{}
 end
 
-defmodule MmAllonet do
+defmodule NetDaemon do
   use GenServer
   require Logger
 
-  def start_link(opts, delegate, udpport) do
-    GenServer.start_link(__MODULE__, %AllonetState{
-      delegate: delegate,
-      udpport: udpport
+  def start_link(opts) do
+    {:ok, pid} = GenServer.start_link(__MODULE__, %AllonetState{
+      delegate: Keyword.get(opts, :delegate),
+      udpport: Keyword.get(opts, :port),
     }, opts)
+    :netpong = NetDaemon.ping(pid)
+    {:ok, pid}
   end
 
   def init(initial_state) do

@@ -29,3 +29,5 @@ _cmake
 priv
 .elixir_ls
 .vscode
+
+storage

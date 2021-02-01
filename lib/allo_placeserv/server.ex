@@ -1,15 +1,14 @@
 defmodule ServerState do
   defstruct clients: %{}, # from client_id to ClientRef
-    mmallo: nil,
     push_state_timer: nil,
     name: "Unnamed place",
     next_free_track: 1,
+    start_time: 0.0,
     store: nil,
-    start_time: 0.0
+    mmallo: nil
 
   @type t :: %ServerState{
     clients: %{required(String.t()) => ClientRef.t()},
-    mmallo: pid(),
     push_state_timer: reference(),
     name: String.t(),
     next_free_track: Integer.t()
@@ -34,37 +33,44 @@ defmodule Server do
   use GenServer
   require Logger
 
-  def init(initial_state) do
-    Logger.info("Starting Alloverse Place server '#{initial_state.name}'")
-    {:ok, mmallo} = MmAllonet.start_link([], self(), 31337)
-    {:ok, store} = PlaceStoreDaemon.start_link([])
-
-    # update state and send world state @ 20hz
-    tref = Process.send_after(self(), :timer, div(1000, 20))
-
-    reply = MmAllonet.ping(mmallo)
-    Logger.info("net replies? #{reply}")
-
-    reply = PlaceStore.ping(store)
-    Logger.info("state replies? #{reply}")
-
-    :ok = PlaceEntity.init(store)
-
-    { :ok,
-      %ServerState{initial_state|
-        push_state_timer: tref,
-        mmallo: mmallo,
-        store: store,
-        start_time: System.monotonic_time
-      }
-    }
-  end
-
   def start_link(opts) do
     name = System.get_env("ALLOPLACE_NAME", "Unnamed place")
     GenServer.start_link(__MODULE__, %ServerState{
       name: name
     }, opts)
+  end
+
+  def init(default_state) do
+
+    # restore state if possible, otherwise initialize start state
+    state = case StateBackupper.get(BackupProc) do
+      {} ->
+        Logger.info("Starting Alloverse Place server '#{default_state.name}'")
+        %ServerState{default_state|
+          start_time: System.monotonic_time
+        }
+      restored_state  ->
+        Logger.info("Restoring Alloverse Place server '#{default_state.name}'")
+        restored_state
+    end
+
+    # so that we always get to store state to StateBackupper
+    Process.flag(:trap_exit, true)
+
+    { :ok,
+      %ServerState{state|
+        # update state and send world state @ 20hz
+        push_state_timer: Process.send_after(self(), :timer, div(1000, 20)),
+        mmallo: NetProc,
+        store: StateProc,
+      }
+    }
+  end
+
+  def terminate reason, state do
+    Logger.warn("Server crashed, reason: #{inspect(reason)}. Saving state: #{inspect(state)}")
+    StateBackupper.set(BackupProc, state)
+    {:shutdown, state}
   end
 
   ### GenServer
@@ -115,10 +121,10 @@ defmodule Server do
     }
     {:ok, json} = Poison.encode(out_packet)
     payload = json
-    MmAllonet.netsend(
+    NetDaemon.netsend(
       state.mmallo,
       from_client_id,
-      MmAllonet.channels.clock,
+      NetDaemon.channels.clock,
       payload
     )
     {:noreply, state}
@@ -142,6 +148,9 @@ defmodule Server do
   end
 
   def handle_timer(state) do
+    # 0. Save the world in case of a crash
+    PlaceStore.save_state(state.store)
+
     # 1. Simulate the world
     clients = Map.values(state.clients)
     intents = Enum.map(clients, fn client -> client.intent end)
@@ -163,10 +172,10 @@ defmodule Server do
 
   defp send_delta(state, client, delta)  do
     payload = delta
-    MmAllonet.netsend(
+    NetDaemon.netsend(
       state.mmallo,
       client.id,
-      MmAllonet.channels.statediffs,
+      NetDaemon.channels.statediffs,
       payload
     )
   end
@@ -213,10 +222,10 @@ defmodule Server do
   def send_interaction(state, dest_client_id, interaction) do
     {:ok, json} = Jason.encode(interaction)
     payload = json
-    case MmAllonet.netsend(
+    case NetDaemon.netsend(
       state.mmallo,
       dest_client_id,
-      MmAllonet.channels.commands,
+      NetDaemon.channels.commands,
       payload
     ) do
       :ok ->
@@ -228,7 +237,7 @@ defmodule Server do
   end
 
   def disconnect_later(state, client, code) do
-    :ok = MmAllonet.disconnect(
+    :ok = NetDaemon.disconnect(
       state.mmallo,
       client.id,
       code
