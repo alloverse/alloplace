@@ -54,6 +54,9 @@ defmodule Server do
         restored_state
     end
 
+    # so that we always get to store state to StateBackupper
+    Process.flag(:trap_exit, true)
+
     { :ok,
       %ServerState{state|
         # update state and send world state @ 20hz

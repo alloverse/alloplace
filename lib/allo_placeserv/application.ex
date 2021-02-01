@@ -26,6 +26,25 @@ defmodule AlloPlaceserv.Application do
   end
 end
 
+defmodule ResetStateOnDisk do
+  use GenServer
+  require Logger
+
+  def start_link opts do
+    GenServer.start_link(__MODULE__, {}, opts)
+  end
+  def init(initial_state) do
+    # Make sure we start with an empty state, so we don't start from stale state from
+    # a previous run
+    # In the future, we can use the stored information to reconnect clients and continue
+    # from this stale state, but we're not there yet.
+    # StateProc isn't alive yet so we can't use PlaceStore.reset(StateProc)
+    Logger.info("Resetting disk state")
+    File.rm("storage/state.json")
+    {:ok, initial_state}
+  end
+end
+
 defmodule AlloPlaceserv.MainSupervisor do
   use Supervisor
   require Logger
@@ -37,22 +56,19 @@ defmodule AlloPlaceserv.MainSupervisor do
   @impl true
   def init(_init_arg) do
     Logger.info("Starting main supervisor from scratch")
-    # Make sure we start with an empty state, so we don't start from stale state..
-    # In the future, we can use the stored information to reconnect clients and continue
-    # from this stale state, but we're not there yet.
-    # StateProc isn't alive yet so we can't use PlaceStore.reset(StateProc)
-    File.rm("storage/state.json")
+
 
     # Alright, boot it up! The order here is important.
     children = [
-      {PlaceStoreDaemon, [name: StateProc]},
       {StateBackupper, [name: BackupProc]},
-      {Server, [name: ServProc]},
       {NetDaemon, [name: NetProc, delegate: ServProc, port: 31337]},
+      ResetStateOnDisk, # if NetDaemon dies, reset disk state
+      {PlaceStoreDaemon, [name: StateProc]},
+      {Server, [name: ServProc]},
     ]
 
     Supervisor.init(children, [
-      strategy: :one_for_one,
+      strategy: :rest_for_one,
     ])
   end
 end
