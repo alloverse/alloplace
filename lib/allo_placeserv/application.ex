@@ -60,8 +60,8 @@ defmodule AlloPlaceserv.MainSupervisor do
 
     # Alright, boot it up! The order here is important.
     children = [
-      {StateBackupper, [name: BackupProc]},
       {NetDaemon, [name: NetProc, delegate: ServProc, port: 31337]},
+      {StateBackupper, [name: BackupProc]},
       ResetStateOnDisk, # if NetDaemon dies, reset disk state
       {PlaceStoreDaemon, [name: StateProc]},
       {Server, [name: ServProc]},
