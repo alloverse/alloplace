@@ -47,7 +47,8 @@ defmodule Poses do
       :head => %Pose{},
       :torso => %Pose{},
       :"hand/left" => %Pose{},
-      :"hand/right" => %Pose{}
+      :"hand/right" => %Pose{},
+      :root => %Pose{},
     }
   end
   def __struct__(kv) do
