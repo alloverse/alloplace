@@ -13,3 +13,6 @@
 [submodule "alloapps/fileviewer"]
 	path = alloapps/fileviewer
 	url = https://github.com/alloverse/allo-fileviewer
+[submodule "alloapps/house"]
+	path = alloapps/house
+	url = git@github.com:alloverse/allo-house.git
