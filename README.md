@@ -33,3 +33,10 @@ then...
 
 * `docker build -t alloplace .`
 * `ALLOPLACE_NAME="lol" docker run -p 21337:21337/udp -it alloplace`
+
+
+## Adding a bundled app
+
+  1. Add submodule: `git submodule add <repo url> alloapp/<name>`
+  2. Add to whitelist in placeentity.ex:206 - `or appname = "<name>"` 
+  3. Add assist fetch to Dockerfile: `RUN cd alloapps/<name>; ./allo/assist fetch`
