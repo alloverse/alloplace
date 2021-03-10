@@ -4,15 +4,20 @@
 [submodule "alloapps/jukebox"]
 	path = alloapps/jukebox
 	url = https://github.com/alloverse/allo-jukebox.git
+  branch = master
 [submodule "alloapps/drawing-board"]
 	path = alloapps/drawing-board
 	url = https://github.com/alloverse/allo-whiteboard.git
+  branch = master
 [submodule "alloapps/clock"]
 	path = alloapps/clock
 	url = https://github.com/alloverse/allo-clock.git
+  branch = main
 [submodule "alloapps/fileviewer"]
 	path = alloapps/fileviewer
 	url = https://github.com/alloverse/allo-fileviewer
+  branch = main
 [submodule "alloapps/house"]
 	path = alloapps/house
 	url = git@github.com:alloverse/allo-house.git
+  branch = main
