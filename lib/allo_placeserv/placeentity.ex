@@ -258,13 +258,14 @@ defmodule PlaceEntity do
 
     defp entities_for_desc(desc, owner, relationships) do
         {childDescs, thisDesc} = Map.pop(desc, :children, [])
+        comps = Map.get(thisDesc, :components, desc) # can be under ["components"] or just loose in the root dict
         thisEnt = %Entity{
             id: Allomisc.generate_id(),
             owner: owner,
             components: Map.merge(%{
                 transform: %TransformComponent{},
                 relationships: relationships
-            }, thisDesc)
+            }, comps)
         }
         childEnts = Enum.flat_map(childDescs, fn childDesc ->
             entities_for_desc(childDesc, owner, %RelationshipsComponent{parent: thisEnt.id})
