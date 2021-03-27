@@ -16,7 +16,7 @@ jobs:
           lfs: true
       - 
         name: Checkout LFS objects
-        run: git lfs checkout
+        run: git lfs checkout; git submodule foreach git lfs fetch; git submodule foreach git lfs checkout; git submodule foreach git lfs ls-files
       -
         name: Set up QEMU
         uses: docker/setup-qemu-action@v1
