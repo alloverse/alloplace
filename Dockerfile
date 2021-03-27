@@ -16,7 +16,7 @@ RUN wget -O cmake-linux.sh https://cmake.org/files/v3.15/cmake-3.15.4-Linux-x86_
     sh cmake-linux.sh -- --skip-license --prefix=/usr/local && \
     /usr/local/bin/cmake --version
 
-ADD . /app/
+ADD alloapps /app/alloapps
 
 RUN cd alloapps/jukebox; ./allo/assist fetch
 RUN cd alloapps/drawing-board; ./allo/assist fetch
@@ -25,6 +25,8 @@ RUN cd alloapps/fileviewer; ./allo/assist fetch
 
 RUN git clone https://github.com/alloverse/allo-house.git alloapps/house
 RUN cd alloapps/house && git submodule update --init --recursive && ./allo/assist fetch
+
+ADD . /app/
 
 RUN mix local.hex --force
 
