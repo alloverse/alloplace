@@ -9,6 +9,14 @@ jobs:
   docker:
     runs-on: ubuntu-latest
     steps:
+      - 
+        name: Checkout github repo (+ download lfs dependencies)
+        uses: actions/checkout@v2
+        with:
+          lfs: true
+      - 
+        name: Checkout LFS objects
+        run: git lfs checkout
       -
         name: Set up QEMU
         uses: docker/setup-qemu-action@v1
