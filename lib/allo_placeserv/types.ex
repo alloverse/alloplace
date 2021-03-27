@@ -58,13 +58,14 @@ end
 
 defmodule ClientIntent do
   defstruct entity_id: "",
+    wants_stick_movement: false,
     zmovement: 0,
     xmovement: 0,
     yaw: 0,
     pitch: 0,
     poses: %Poses{},
     ack_state_rev: 0
-    @type t :: %ClientIntent{entity_id: String.t(), zmovement: float, xmovement: float, yaw: float, pitch: float, poses: Poses.t(), ack_state_rev: integer}
+    @type t :: %ClientIntent{entity_id: String.t(), wants_stick_movement: bool, zmovement: float, xmovement: float, yaw: float, pitch: float, poses: Poses.t(), ack_state_rev: integer}
 end
 
 defmodule Interaction do
