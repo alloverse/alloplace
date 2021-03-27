@@ -6,6 +6,7 @@ RUN apt-get update && apt-get install -y build-essential \
     cmake \
     clang-3.8 \
     git \
+    git-lfs \
     libgme-dev \
     libcairo2 libpoppler-glib-dev \
     && apt-get clean \
@@ -21,7 +22,9 @@ RUN cd alloapps/jukebox; ./allo/assist fetch
 RUN cd alloapps/drawing-board; ./allo/assist fetch
 RUN cd alloapps/clock; ./allo/assist fetch
 RUN cd alloapps/fileviewer; ./allo/assist fetch
-RUN cd alloapps/house; ./allo/assist fetch
+
+RUN git clone https://github.com/alloverse/allo-house.git alloapps/house
+RUN cd alloapps/house && git submodule update --init --recursive && ./allo/assist fetch
 
 RUN mix local.hex --force
 
