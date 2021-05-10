@@ -6,6 +6,7 @@ things.
 ## Setup 
 
 * `git submodule update --init --recursive`
+* `git clone --recursive https://github.com/alloverse/allo-marketplace.git marketplace; cd marketplace && ./allo/assist fetch && ./fetch-apps.sh`
 
 then...
 

@@ -201,26 +201,6 @@ defmodule PlaceEntity do
     def handle_interaction(server_state,
         client,
         %Interaction{
-            :body => ["launch_app", appname]
-        } = interaction
-    ) when appname == "jukebox" or appname == "drawing-board" or appname == "clock" or appname == "fileviewer" or appname == "house"
-    do
-        Logger.info("Launching app #{appname}")
-
-        # please don't judge me
-        spawn fn ->
-            System.cmd("bash", ["-c", "cd alloapps/#{appname}; ./allo/assist run alloplace://localhost"])
-        end
-
-        response = Interaction.make_response(interaction, ["launch_app", "ok"])
-        Server.send_interaction(server_state, client.id, response)
-
-        {:ok, server_state}
-    end
-
-    def handle_interaction(server_state,
-        client,
-        %Interaction{
             :body => ["lol", _a, _b, _c]
         } = interaction
     ) do

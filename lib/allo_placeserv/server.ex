@@ -57,6 +57,8 @@ defmodule Server do
     # so that we always get to store state to StateBackupper
     Process.flag(:trap_exit, true)
 
+    Server.launch_apps()
+
     { :ok,
       %ServerState{state|
         # update state and send world state @ 20hz
@@ -71,6 +73,21 @@ defmodule Server do
     Logger.warn("Server crashed, reason: #{inspect(reason)}. Saving state: #{inspect(state)}")
     StateBackupper.set(BackupProc, state)
     {:shutdown, state}
+  end
+
+  def run_marketplace_forever do
+    System.cmd("bash", ["-c", "cd marketplace; ./allo/assist run alloplace://localhost"])
+    :timer.sleep(1000)
+    run_marketplace_forever()
+  end
+
+  def launch_apps do
+    spawn fn ->
+      System.cmd("bash", ["-c", "cd marketplace/apps/allo-house; ./allo/assist run alloplace://localhost"])
+    end
+    spawn fn ->
+      Server.run_marketplace_forever
+    end
   end
 
   ### GenServer
