@@ -17,6 +17,8 @@ RUN wget -O cmake-linux.sh https://cmake.org/files/v3.15/cmake-3.15.4-Linux-x86_
     /usr/local/bin/cmake --version
 
 
+# make sure fetch apps always fetches the latest
+ADD "https://www.random.org/cgi-bin/randbyte?nbytes=10&format=h" skipcache
 RUN git clone --recursive https://github.com/alloverse/allo-marketplace.git marketplace
 RUN cd marketplace && ./allo/assist fetch && ./fetch-apps.sh
 
