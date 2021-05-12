@@ -9,6 +9,9 @@ defmodule PlaceStore do
   def remove_entities_owned_by(server, owner_id) do
     GenServer.cast(server, {:remove_entities_owned_by, owner_id})
   end
+  def remove_entities_not_owned_by(server, owner_ids) do
+    GenServer.cast(server, {:remove_entities_not_owned_by, owner_ids})
+  end
 
   @doc """
     Update a specific entity by replacing some of its components with new values
@@ -103,7 +106,11 @@ defmodule PlaceStoreDaemon do
 
   def handle_cast(ccall, state) do
     cmd = elem(ccall, 0)
-    args = Tuple.delete_at(ccall, 0)
+    args = case ccall do
+      {:remove_entities_not_owned_by, owner_ids} -> with {:ok, json} <- Poison.encode(owner_ids), do: {json}
+      _ -> Tuple.delete_at(ccall, 0)
+    end
+
     {:ok, dstate} = Daemon.call_to_c(cmd, args, state)
     { :noreply,
       dstate

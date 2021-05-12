@@ -54,9 +54,12 @@ defmodule Server do
         restored_state
     end
 
+    state = Server.ensure_sanity(state)
+
     # so that we always get to store state to StateBackupper
     Process.flag(:trap_exit, true)
 
+    # TODO: Make sure apps from previous launch are killed
     Server.launch_apps()
 
     { :ok,
@@ -73,6 +76,24 @@ defmodule Server do
     Logger.warn("Server crashed, reason: #{inspect(reason)}. Saving state: #{inspect(state)}")
     StateBackupper.set(BackupProc, state)
     {:shutdown, state}
+  end
+
+  def ensure_sanity state do
+    Logger.debug("ensure_sanity")
+    state = %ServerState{state|
+      clients: :maps.filter(fn cid, _cref ->
+        case NetDaemon.status(NetProc, cid) do
+          :ok -> true
+          {:error, reason} ->
+            Logger.warn("ensure_sanity: dropping lost client #{cid}: #{reason}")
+            false
+        end
+      end, state.clients)
+    }
+
+    PlaceStore.remove_entities_not_owned_by(StateProc, Map.keys(state.clients))
+
+    state
   end
 
   def run_marketplace_forever do

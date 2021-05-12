@@ -93,6 +93,24 @@ void handle_erl()
         scoped_comp ETERM *msg = erl_format("{response, ~w, {error, \"no such client\"}}", reqId);
         write_term(msg);
         return;
+    } else if(strcmp(ERL_ATOM_PTR(command), "status") == 0) {
+        scoped_term ETERM* e_client_id = erl_element(1, args);
+        char agent_id[AGENT_ID_LENGTH+1] = {0};
+        assert(ERL_BIN_SIZE(e_client_id) == AGENT_ID_LENGTH);
+        memcpy(agent_id, ERL_BIN_PTR(e_client_id), ERL_BIN_SIZE(e_client_id));
+
+        alloserver_client *client;
+        LIST_FOREACH(client, &serv->clients, pointers)
+        {
+            if(strcmp(client->agent_id, agent_id) == 0) {
+                scoped_comp ETERM *msg = erl_format("{response, ~w, ok}", reqId);
+                write_term(msg);
+                return;
+            }
+        }
+        scoped_comp ETERM *msg = erl_format("{response, ~w, {error, \"no such client\"}}", reqId);
+        write_term(msg);
+
     } else if(strcmp(ERL_ATOM_PTR(command), "ping") == 0) {
         scoped_comp ETERM *msg = erl_format("{response, ~w, netpong}", reqId);
         write_term(msg);

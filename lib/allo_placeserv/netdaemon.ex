@@ -59,6 +59,9 @@ defmodule NetDaemon do
   def ping(this) do
     GenServer.call(this, {:ccall, :ping, {}})
   end
+  def status(this, client_id) do
+    GenServer.call(this, {:ccall, :send, {client_id}})
+  end
 
   def handle_call({:ccall, cmd, args}, from, state) do
     {:ok, daemon} = Daemon.call_to_c(cmd, args, from, state.daemon)
@@ -150,7 +153,7 @@ defmodule NetDaemon do
       state
     }
   end
-  defp parse_payload(client_id, @channel_assets, payload, state) do
+  defp parse_payload(_client_id, @channel_assets, _payload, _state) do
     # Channel is disabled in server.c
   end
 

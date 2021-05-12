@@ -71,6 +71,33 @@ static void remove_entity_by_owner(const char *owner_id)
     }
 }
 
+static void remove_entities_not_owned_by(cJSON *owner_ids)
+{
+    allo_entity *entity = state->entities.lh_first;
+    while(entity)
+    {
+        allo_entity *to_delete = entity;
+        entity = entity->pointers.le_next;
+        bool found = false;
+        cJSON *potential_owner = owner_ids->child;
+        while(potential_owner)
+        {
+            if (strcmp(to_delete->owner_agent_id, potential_owner->valuestring) == 0)
+            {
+                found = true;
+                break;
+            }
+            potential_owner = potential_owner->next;
+        }
+        if(!found)
+        {
+            printf("Removing entity %s which had non-existing owner %s\n", to_delete->id, to_delete->owner_agent_id);
+            LIST_REMOVE(to_delete, pointers);
+            entity_destroy(to_delete);
+        }
+    }
+}
+
 static void simulate(long reqId, cJSON *jintents, ei_x_buff *response, double server_time)
 {
     int intent_count = cJSON_GetArraySize(jintents);
@@ -249,6 +276,11 @@ void handle_erl()
     {
         scoped char *owner_id = ei_decode_elixir_string(request, &request_index);
         remove_entity_by_owner(owner_id);
+    }
+    else if(strcmp(command, "remove_entities_not_owned_by") == 0)
+    {
+        scopedj cJSON *owner_ids = ei_decode_cjson_string(request, &request_index);
+        remove_entities_not_owned_by(owner_ids);
     }
     else if(strcmp(command, "simulate") == 0)
     {
