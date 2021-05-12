@@ -5,7 +5,9 @@ defmodule ServerState do
     next_free_track: 1,
     start_time: 0.0,
     store: nil,
-    mmallo: nil
+    mmallo: nil,
+    house_pid: nil,
+    marketplace_pid: nil
 
   @type t :: %ServerState{
     clients: %{required(String.t()) => ClientRef.t()},
@@ -59,8 +61,7 @@ defmodule Server do
     # so that we always get to store state to StateBackupper
     Process.flag(:trap_exit, true)
 
-    # TODO: Make sure apps from previous launch are killed
-    Server.launch_apps()
+    state = Server.launch_apps(state)
 
     { :ok,
       %ServerState{state|
@@ -102,13 +103,15 @@ defmodule Server do
     run_marketplace_forever()
   end
 
-  def launch_apps do
-    spawn fn ->
-      System.cmd("bash", ["-c", "cd marketplace/apps/allo-house; ./allo/assist run alloplace://localhost"])
-    end
-    spawn fn ->
-      Server.run_marketplace_forever
-    end
+  def launch_apps state do
+    %ServerState{state|
+      house_pid: spawn_link(fn ->
+        System.cmd("bash", ["-c", "cd marketplace/apps/allo-house; ./allo/assist run alloplace://localhost"])
+      end),
+      marketplace_pid: spawn_link(fn ->
+        Server.run_marketplace_forever
+      end)
+    }
   end
 
   ### GenServer
@@ -166,6 +169,12 @@ defmodule Server do
       payload
     )
     {:noreply, state}
+  end
+
+  def handle_info({:EXIT, pid, reason}, state) do
+    cond do
+      pid == state.house_pid or pid == state.marketplace_pid -> {:noreply, state}
+    end
   end
 
   defp server_time(state) do
