@@ -75,6 +75,8 @@ defmodule Server do
 
   def terminate reason, state do
     Logger.warn("Server crashed, reason: #{inspect(reason)}. Saving state: #{inspect(state)}")
+    Port.close(state.house_port)
+    Port.close(state.marketplace_port)
     StateBackupper.set(BackupProc, state)
     {:shutdown, state}
   end
@@ -97,20 +99,20 @@ defmodule Server do
     state
   end
 
-  def run_marketplace_forever do
-    System.cmd("bash", ["-c", "cd marketplace; ./allo/assist run alloplace://localhost"])
-    :timer.sleep(1000)
-    run_marketplace_forever()
+  def launch_app path do
+    {:ok, cwd} = File.cwd()
+    port = Port.open({:spawn_executable, '/bin/bash'}, [
+      { :args, ["-c", "cd #{cwd}/#{path}; ./allo/assist run alloplace://localhost"] },
+      :nouse_stdio
+    ])
+    Process.link port
+    port
   end
 
   def launch_apps state do
-    house_port = Port.open({:spawn, "bash"}, [
-      {:args, ["-c", "cd marketplace/apps/allo-house; ./allo/assist run alloplace://localhost"]},
-      :nouse_stdio
-    ])
-    Process.link house_port
     %ServerState{state|
-      house_port: house_port,
+      house_port: launch_app("marketplace/apps/allo-house"),
+      marketplace_port: launch_app("marketplace")
     }
   end
 
@@ -171,12 +173,19 @@ defmodule Server do
     {:noreply, state}
   end
 
-  def handle_info({:EXIT, pid, _reason}, state) do
+  def handle_info({:EXIT, pid, reason}, state) do
     cond do
-      pid == state.house_port -> {:noreply, state}
+      pid == state.house_port ->
+        Logger.warn("House died: #{reason}. Oh well.")
+        {:noreply, %ServerState{state|
+          house_port: nil
+        }}
       pid == state.marketplace_port ->
-        # restart marketplace here
-        {:noreply, state}
+        Logger.warn("Marketplace died: #{reason}. Restarting it.")
+        :timer.sleep(1000)
+        {:noreply, %ServerState{state|
+          marketplace_port: launch_app("marketplace")
+        }}
     end
   end
 
