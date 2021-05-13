@@ -10,8 +10,8 @@ defmodule AlloPlaceserv.Application do
     File.mkdir("storage")
     File.mkdir("tmp")
 
-    :debugger.start()
-    :observer.start()
+    #:debugger.start()
+    #:observer.start()
 
     # Setup a root supervisor that just makes sure we serve basically forever, even if
     # everything keeps crashing
