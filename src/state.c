@@ -80,6 +80,8 @@ static void remove_entities_not_owned_by(cJSON *owner_ids)
         entity = entity->pointers.le_next;
         bool found = false;
         cJSON *potential_owner = owner_ids->child;
+        if(entity->owner_agent_id == NULL)
+            continue;
         while(potential_owner)
         {
             if (strcmp(to_delete->owner_agent_id, potential_owner->valuestring) == 0)

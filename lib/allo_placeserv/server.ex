@@ -6,8 +6,8 @@ defmodule ServerState do
     start_time: 0.0,
     store: nil,
     mmallo: nil,
-    house_pid: nil,
-    marketplace_pid: nil
+    house_port: nil,
+    marketplace_port: nil
 
   @type t :: %ServerState{
     clients: %{required(String.t()) => ClientRef.t()},
@@ -104,13 +104,13 @@ defmodule Server do
   end
 
   def launch_apps state do
+    house_port = Port.open({:spawn, "bash"}, [
+      {:args, ["-c", "cd marketplace/apps/allo-house; ./allo/assist run alloplace://localhost"]},
+      :nouse_stdio
+    ])
+    Process.link house_port
     %ServerState{state|
-      house_pid: spawn_link(fn ->
-        System.cmd("bash", ["-c", "cd marketplace/apps/allo-house; ./allo/assist run alloplace://localhost"])
-      end),
-      marketplace_pid: spawn_link(fn ->
-        Server.run_marketplace_forever
-      end)
+      house_port: house_port,
     }
   end
 
@@ -171,9 +171,12 @@ defmodule Server do
     {:noreply, state}
   end
 
-  def handle_info({:EXIT, pid, reason}, state) do
+  def handle_info({:EXIT, pid, _reason}, state) do
     cond do
-      pid == state.house_pid or pid == state.marketplace_pid -> {:noreply, state}
+      pid == state.house_port -> {:noreply, state}
+      pid == state.marketplace_port ->
+        # restart marketplace here
+        {:noreply, state}
     end
   end
 
