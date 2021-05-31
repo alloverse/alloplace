@@ -142,9 +142,9 @@ defmodule PlaceEntity do
 
             # compat
             sample_rate: Map.get(metadata, :sample_rate, 48000),
-            channel_count: Map.get(metadata, :channel_count, 1),
+            channel_count: 1,
         }
-        Logger.info("Allocating modern media track ##{track_id} to #{interaction.from_entity}: #{media_comp}")
+        Logger.info("Allocating modern media track ##{track_id} to #{interaction.from_entity}: #{inspect(media_comp)}")
 
         :ok = PlaceStore.update_entity(server_state.store,
             interaction.from_entity,
@@ -175,7 +175,7 @@ defmodule PlaceEntity do
             # forward-compat
             metadata: %{
                 sample_rate: sample_rate,
-                channel_count: channel_count
+                channel_layout: "mono"
             },
 
             # legacy-compat

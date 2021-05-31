@@ -254,7 +254,7 @@ defmodule Server do
       PlaceEntity.handle_interaction(state, from_client, interaction)
     rescue
       e ->
-        Logger.error("Place interaction #{inspect(interaction)} from #{from_client.id} failed terribly: #{inspect(e)}")
+        Logger.error("Place interaction #{inspect(interaction)} from #{from_client.id} failed terribly: #{Exception.format(:error, e, __STACKTRACE__)}")
         Server.send_interaction(state, from_client.id, Interaction.make_response(interaction, ["error", "invalid_request", hd(interaction.body)]))
         {:ok, state}
     end
