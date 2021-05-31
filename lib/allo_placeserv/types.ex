@@ -146,11 +146,13 @@ end
 
 defmodule LiveMediaComponent do
   @derive Jason.Encoder
-  defstruct type: "audio",
-    track_id: 0,
+  defstruct track_id: 0,
+    type: "audio",
+    format: "opus",
+    metadata: %{},
+    # legacy fields, kept for compat
     sample_rate: 48000,
-    channel_count: 1,
-    format: "opus"
+    channel_count: 1
 end
 
 defmodule Entity do

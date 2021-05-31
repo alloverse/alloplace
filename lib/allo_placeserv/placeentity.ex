@@ -125,6 +125,41 @@ defmodule PlaceEntity do
         })
     end
 
+    # Modern allocate_track
+    def handle_interaction(server_state,
+        client,
+        %Interaction{
+            :body => ["allocate_track", media_type, media_format, metadata]
+        } = interaction
+    ) do
+        track_id = server_state.next_free_track
+
+        media_comp = %LiveMediaComponent{
+            track_id: track_id,
+            type: media_type,
+            format: media_format,
+            metadata: metadata,
+
+            # compat
+            sample_rate: Map.get(metadata, :sample_rate, 48000),
+            channel_count: Map.get(metadata, :channel_count, 1),
+        }
+        Logger.info("Allocating modern media track ##{track_id} to #{interaction.from_entity}: #{media_comp}")
+
+        :ok = PlaceStore.update_entity(server_state.store,
+            interaction.from_entity,
+            %{ live_media: media_comp },
+            []
+        )
+        response = Interaction.make_response(interaction, ["allocate_track", "ok", track_id])
+        Server.send_interaction(server_state, client.id, response)
+
+        {:ok, %ServerState{server_state|
+            next_free_track: track_id + 1,
+        }}
+    end
+
+    # Legacy allocate_track
     def handle_interaction(server_state,
         client,
         %Interaction{
@@ -132,15 +167,23 @@ defmodule PlaceEntity do
         } = interaction
     ) do
         track_id = server_state.next_free_track
-        Logger.info("Allocating media track ##{track_id} to #{interaction.from_entity}")
 
         media_comp = %LiveMediaComponent{
-            type: media_type,
             track_id: track_id,
+            type: media_type,
+            format: media_format,
+            # forward-compat
+            metadata: %{
+                sample_rate: sample_rate,
+                channel_count: channel_count
+            },
+
+            # legacy-compat
             sample_rate: sample_rate,
             channel_count: channel_count,
-            format: media_format
         }
+        Logger.info("Allocating legacy media track ##{track_id} to #{interaction.from_entity}: #{inspect(media_comp)}")
+
 
         :ok = PlaceStore.update_entity(server_state.store,
             interaction.from_entity,
