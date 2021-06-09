@@ -24,7 +24,7 @@ jobs:
         name: Generate version header
         run: |
           mkdir _cmake
-          cd cmake
+          cd _cmake
           cmake ..
           make version_header
       -
