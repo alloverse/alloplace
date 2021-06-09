@@ -23,6 +23,9 @@ jobs:
       - 
         name: Generate version header
         run: |
+          cd src/allonet
+          git fetch --all --tags
+          cd ../..
           mkdir _cmake
           cd _cmake
           cmake ..
