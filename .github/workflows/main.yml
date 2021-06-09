@@ -9,11 +9,13 @@ jobs:
   docker:
     runs-on: ubuntu-latest
     steps:
-      - 
-        name: Checkout github repo (+ download lfs dependencies)
-        uses: actions/checkout@v2
+      - uses: actions/checkout@v2.3.4
         with:
-          lfs: true
+          lfs: 'true'
+          submodules: 'recursive'
+        env:
+          GIT_CURL_VERBOSE: '1'
+          GIT_TRACE: '1'
       - 
         name: Checkout LFS objects
         run: git lfs pull; git submodule foreach --recursive git lfs pull
