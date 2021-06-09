@@ -13,9 +13,6 @@ jobs:
         with:
           lfs: 'true'
           submodules: 'recursive'
-        env:
-          GIT_CURL_VERBOSE: '1'
-          GIT_TRACE: '1'
       - 
         name: Checkout LFS objects
         run: git lfs pull; git submodule foreach --recursive git lfs pull
