@@ -16,6 +16,9 @@ jobs:
       - 
         name: Checkout LFS objects
         run: git lfs pull; git submodule foreach --recursive git lfs pull
+      - 
+        name: Generate version header
+        run: mix compile.cmake version_header
       -
         name: Set up QEMU
         uses: docker/setup-qemu-action@v1

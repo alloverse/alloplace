@@ -20,6 +20,10 @@ ADD marketplace /app/marketplace
 
 RUN cd marketplace && bash bootstrap.sh
 
+# We can't run generate-version.sh inside of the container :S
+# This means you MUST run mix compile on the outside of the container before building!!
+COPY _cmake/src/allonet/include /app/_cmake/src/allonet/include
+
 ADD . /app/
 
 RUN mix local.hex --force
