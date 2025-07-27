@@ -3,6 +3,12 @@
 Server component of Alloverse. Basically a multiplayer game server, but for window manager-y
 things.
 
+# This project is deprecated and archived
+
+The Elixir AlloPlace server was replaced by [AlloPlace2](https://github.com/alloverse/alloplace2) (written in C) in 2022.
+This project is no longer maintained and is archived for reference.
+
+
 ## Setup 
 
 * `git submodule update --init --recursive`
